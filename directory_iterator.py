@@ -80,7 +80,7 @@ class DirectoryIterator(BatchFromFilesMixin, Iterator):
                  save_format='png',
                  follow_links=False,
                  subset=None,
-                 interpolation='nearest',
+                 interpolation=cv2.INTER_NEAREST,
                  dtype='float32'):
         super(DirectoryIterator, self).set_processing_attrs(image_data_generator,
                                                             target_size,
