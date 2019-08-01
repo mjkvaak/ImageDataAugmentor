@@ -1,7 +1,7 @@
 import numpy as np
 import threading
 import cv2    
-from keras.utils import Sequence
+from keras.utils import Sequence, to_categorical
 import threading
 try:
     from PIL import ImageEnhance
@@ -80,7 +80,7 @@ class ImageDataAugmentor(Sequence):
                            save_format='png',
                            follow_links=False,
                            subset=None,
-                           interpolation='nearest'):
+                           interpolation=cv2.INTER_NEAREST):
         """Takes the path to a directory & generates batches of augmented data.
         # Arguments
             file_list: List of the target samples.
@@ -88,7 +88,7 @@ class ImageDataAugmentor(Sequence):
             target_size: Tuple of integers `(height, width)`,
                 default: `(256, 256)`.
                 The dimensions to which all images found will be resized.
-            color_mode: One of "grayscale", "rbg", "rgba". Default: "rgb".
+            color_mode: One of "gray", "rbg", "rgba". Default: "rgb".
                 Whether the images will be converted to
                 have 1, 3, or 4 channels.
             classes: Optional list of class subdirectories
@@ -133,12 +133,9 @@ class ImageDataAugmentor(Sequence):
             interpolation: Interpolation method used to
                 resample the image if the
                 target size is different from that of the loaded image.
-                Supported methods are `"nearest"`, `"bilinear"`,
-                and `"bicubic"`.
-                If PIL version 1.1.3 or newer is installed, `"lanczos"` is also
-                supported. If PIL version 3.4.0 or newer is installed,
-                `"box"` and `"hamming"` are also supported.
-                By default, `"nearest"` is used.
+                Supported methods are `"cv2.INTER_NEAREST"`, `"cv2.INTER_LINEAR"`, `"cv2.INTER_AREA"`, `"cv2.INTER_CUBIC"`
+                and `"cv2.INTER_LANCZOS4"`
+                By default, `"cv2.INTER_NEAREST"` is used.
         # Returns
             A `FilelistIterator` yielding tuples of `(x, y)`
                 where `x` is a numpy array containing a batch
@@ -220,9 +217,9 @@ class Iterator(object):
                     interpolation):
         self.image_data_generator = image_data_generator
         self.target_size = tuple(target_size)
-        if color_mode not in {'rgb', 'bgr', 'rgba', 'grayscale'}:
+        if color_mode not in {'rgb', 'bgr', 'rgba', 'gray'}:
             raise ValueError('Invalid color mode:', color_mode,
-                             '; expected "rgb", "bgr", "rgba", or "grayscale".')
+                             '; expected "rgb", "bgr", "rgba", or "gray".')
         self.color_mode = color_mode
         self.data_format = data_format
         if self.color_mode == 'rgba':
@@ -303,8 +300,6 @@ class Iterator(object):
         """
         raise NotImplementedError           
             
-            
-            
 
 class FilelistIterator(Iterator):
     """Iterator capable of reading images from a list of files on disk.
@@ -318,7 +313,7 @@ class FilelistIterator(Iterator):
         image_data_generator: Instance of `ImageDataGenerator`
             to use for random transformations and normalization.
         target_size: tuple of integers, dimensions to resize input images to.
-        color_mode: One of `"rgb"`, `"bgr"`,  `"rgba"`, `"grayscale"`.
+        color_mode: One of `"rgb"`, `"bgr"`,  `"rgba"`, `"gray"`.
             Color mode to read images.
         classes: Optional list of strings, names of subdirectories
             containing images from each class (e.g. `["dogs", "cats"]`).
@@ -361,17 +356,17 @@ class FilelistIterator(Iterator):
                  save_to_dir=None, save_prefix='', save_format='png',
                  follow_links=False,
                  subset=None,
-                 interpolation='nearest',
+                 interpolation=cv2.INTER_NEAREST,
                  dtype='float32'):
         super(FilelistIterator, self).common_init(image_data_generator,
-                                                   target_size,
-                                                   color_mode,
-                                                   data_format,
-                                                   save_to_dir,
-                                                   save_prefix,
-                                                   save_format,
-                                                   subset,
-                                                   interpolation)
+                                                  target_size,
+                                                  color_mode,
+                                                  data_format,
+                                                  save_to_dir,
+                                                  save_prefix,
+                                                  save_format,
+                                                  subset,
+                                                  interpolation)
         self.filenames = file_list
         self.labels = label_list
         
@@ -399,9 +394,7 @@ class FilelistIterator(Iterator):
             
         
         self.classes = np.array([self.class_indices[i] for i in self.labels])
-        
-
-
+       
         print('Found %d images belonging to %d classes.' %
               (self.samples, self.num_classes))
 
@@ -444,8 +437,12 @@ class FilelistIterator(Iterator):
         ##         img.close()
         ##     x = self.image_data_generator.transform_image(x)
         ##     batch_x[i] = x
-
-        batch_x = np.array([load_img(self.filenames(x)) for x in index_array])    
+        
+        # build batch of image data
+        batch_x = np.array([load_img(self.filenames(x), 
+                                     color_mode=self.color_mode, 
+                                     target_size=self.target_size,
+                                     interpolation=self.interpolation) for x in index_array])    
         
         # optionally save augmented images to disk for debugging purposes
         if self.save_to_dir:
@@ -457,6 +454,7 @@ class FilelistIterator(Iterator):
                     hash=np.random.randint(1e7),
                     format=self.save_format)
                 img.save(os.path.join(self.save_to_dir, fname))
+                
         # build batch of labels
         if self.class_mode == 'input':
             batch_y = batch_x.copy()
@@ -465,11 +463,12 @@ class FilelistIterator(Iterator):
         elif self.class_mode == 'binary':
             batch_y = self.classes[index_array].astype(self.dtype)
         elif self.class_mode == 'categorical':
-            batch_y = np.zeros(
-                (len(batch_x), self.num_classes),
-                dtype=self.dtype)
-            for i, label in enumerate(self.classes[index_array]):
-                batch_y[i, label] = 1.
+            #batch_y = np.zeros(
+            #    (len(batch_x), self.num_classes),
+            #    dtype=self.dtype)
+            #for i, label in enumerate(self.classes[index_array]):
+            #    batch_y[i, label] = 1.
+            batch_y = to_categorical(self.classes[index_array], self.num_classes, dtype=self.dtype)
         else:
             return batch_x
         return batch_x, batch_y
@@ -594,12 +593,12 @@ def save_img(path,
     img.save(path, format=file_format, **kwargs)
 
 
-## def load_img(path, grayscale=False, color_mode='rgb', target_size=None,
+## def load_img(path, color_mode='rgb', target_size=None,
 ##              interpolation='nearest'):
 ##     """Loads an image into PIL format.
 ##     # Arguments
 ##         path: Path to image file.
-##         color_mode: One of "grayscale", "rbg", "rgba". Default: "rgb".
+##         color_mode: One of "gray", "rbg", "rgba". Default: "rgb".
 ##             The desired image format.
 ##         target_size: Either `None` (default to original size)
 ##             or tuple of ints `(img_height, img_width)`.
@@ -615,15 +614,11 @@ def save_img(path,
 ##         ImportError: if PIL is not available.
 ##         ValueError: if interpolation method is not supported.
 ##     """
-##     if grayscale is True:
-##         warnings.warn('grayscale is deprecated. Please use '
-##                       'color_mode = "grayscale"')
-##         color_mode = 'grayscale'
 ##     if pil_image is None:
 ##         raise ImportError('Could not import PIL.Image. '
 ##                           'The use of `array_to_img` requires PIL.')
 ##     img = pil_image.open(path)
-##     if color_mode == 'grayscale':
+##     if color_mode == 'gray':
 ##         if img.mode != 'L':
 ##             img = img.convert('L')
 ##     elif color_mode == 'rgba':
@@ -633,7 +628,7 @@ def save_img(path,
 ##         if img.mode != 'RGB':
 ##             img = img.convert('RGB')
 ##     else:
-##         raise ValueError('color_mode must be "grayscale", "rbg", or "rgba"')
+##         raise ValueError('color_mode must be "gray", "rbg", or "rgba"')
 ##     if target_size is not None:
 ##         width_height_tuple = (target_size[1], target_size[0])
 ##         if img.size != width_height_tuple:
@@ -647,7 +642,7 @@ def save_img(path,
 ##             img = img.resize(width_height_tuple, resample)
 ##     return img
         
-def load_img(fname, target_size=None):
+def load_img(fname, color_mode='rgb', target_size=None, interpolation=cv2.INTER_NEAREST):
     if self.color_mode == "rgb":
         img = cv2.imread(fname)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
