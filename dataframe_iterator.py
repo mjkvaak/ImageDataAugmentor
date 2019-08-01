@@ -42,7 +42,7 @@ class DataFrameIterator(BatchFromFilesMixin, Iterator):
         weight_col: string, column in `dataframe` that contains the sample
             weights. Default: `None`.
         target_size: tuple of integers, dimensions to resize input images to.
-        color_mode: One of `"rgb"`, `"rgba"`, `"grayscale"`.
+        color_mode: One of `"rgb"`, `"rgba"`, `"gray"`.
             Color mode to read images.
         classes: Optional list of strings, classes to use (e.g. `["dogs", "cats"]`).
             If None, all classes in `y_col` will be used.
