@@ -26,7 +26,7 @@ class DirectoryIterator(BatchFromFilesMixin, Iterator):
         image_data_generator: Instance of `ImageDataGenerator`
             to use for random transformations and normalization.
         target_size: tuple of integers, dimensions to resize input images to.
-        color_mode: One of `"rgb"`, `"rgba"`, `"grayscale"`.
+        color_mode: One of `"rgb"`, `"rgba"`, `"gray"`.
             Color mode to read images.
         classes: Optional list of strings, names of subdirectories
             containing images from each class (e.g. `["dogs", "cats"]`).
