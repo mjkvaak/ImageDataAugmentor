@@ -20,17 +20,21 @@ Custom image data generator supporting the modern augmentation modules (e.g. img
             rescale=1./255,
             transform = transform,
             preprocess_input=None)
+            
     test_datagen = ImageDataAugmentor(rescale=1./255)
+    
     train_generator = train_datagen.flow_from_directory(
             'data/train',
             target_size=(224, 224),
             batch_size=32,
             class_mode='binary')
+            
     validation_generator = test_datagen.flow_from_directory(
             'data/validation',
             target_size=(224, 224),
             batch_size=32,
             class_mode='binary')
+            
     model.fit_generator(
             train_generator,
             steps_per_epoch=len(train_generator),
