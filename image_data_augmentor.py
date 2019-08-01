@@ -532,9 +532,9 @@ class ImageDataAugmentor(Sequence):
     
     def transform_image(self, x):
         if self.transform:
-            img = self.transform(image=x)['image']
-            img = standardize(img)
-        return img
+            x = self.transform(image=x)['image']
+            x = standardize(x)
+        return x
          
     def fit(self, x,
             augment=False,
