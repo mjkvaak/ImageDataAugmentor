@@ -3,7 +3,6 @@ Custom image data generator supporting the modern augmentation modules (e.g. img
 
 
 > Example of using `.flow_from_directory(directory)`:
-    ```python
     
     transforms = albumentations.Compose([
         albumentations.Transpose(p=0.5),
@@ -38,5 +37,5 @@ Custom image data generator supporting the modern augmentation modules (e.g. img
             epochs=50,
             validation_data=validation_generator,
             validation_steps=len(validation_generator))
-    ```
+
 
