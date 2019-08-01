@@ -149,7 +149,7 @@ class BatchFromFilesMixin():
             image_data_generator: Instance of `ImageDataGenerator`
                 to use for random transformations and normalization.
             target_size: tuple of integers, dimensions to resize input images to.
-            color_mode: One of `"rgb"`, `"rgba"`, `"grayscale"`.
+            color_mode: One of `"rgb"`, `"rgba"`, `"gray"`.
                 Color mode to read images.
             data_format: String, one of `channels_first`, `channels_last`.
             save_to_dir: Optional directory where to save the pictures
@@ -162,18 +162,18 @@ class BatchFromFilesMixin():
                 (if `save_to_dir` is set).
             subset: Subset of data (`"training"` or `"validation"`) if
                 validation_split is set in ImageDataGenerator.
-            interpolation: Interpolation method used to resample the image if the
+            interpolation: Interpolation method used to
+                resample the image if the
                 target size is different from that of the loaded image.
-                Supported methods are "nearest", "bilinear", and "bicubic".
-                If PIL version 1.1.3 or newer is installed, "lanczos" is also
-                supported. If PIL version 3.4.0 or newer is installed, "box" and
-                "hamming" are also supported. By default, "nearest" is used.
+                Supported methods are `"cv2.INTER_NEAREST"`, `"cv2.INTER_LINEAR"`, `"cv2.INTER_AREA"`, `"cv2.INTER_CUBIC"`
+                and `"cv2.INTER_LANCZOS4"`
+                By default, `"cv2.INTER_NEAREST"` is used.
         """
         self.image_data_generator = image_data_generator
         self.target_size = tuple(target_size)
-        if color_mode not in {'rgb', 'rgba', 'grayscale'}:
+        if color_mode not in {'rgb', 'rgba', 'gray'}:
             raise ValueError('Invalid color mode:', color_mode,
-                             '; expected "rgb", "rgba", or "grayscale".')
+                             '; expected "rgb", "rgba", or "gray".')
         self.color_mode = color_mode
         self.data_format = data_format
         if self.color_mode == 'rgba':
