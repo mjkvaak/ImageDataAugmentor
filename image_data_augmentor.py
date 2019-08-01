@@ -29,7 +29,7 @@ class ImageDataAugmentor(Sequence):
             If None or 0, no rescaling is applied,
             otherwise we multiply the data by the value provided
             (after applying all other transformations).
-        preprocessing_function: function that will be implied on each input.
+        preprocessing_input: function that will be implied on each input.
             The function will run after the image is resized and augmented.
             The function should take one argument:
             one image (Numpy tensor with rank 3),
@@ -49,13 +49,23 @@ class ImageDataAugmentor(Sequence):
     """
 
     def __init__(self,
+                 featurewise_center=False,
+                 samplewise_center=False,
+                 featurewise_std_normalization=False,
+                 samplewise_std_normalization=False,
+                 zca_whitening=False,
                  transform = None,
                  rescale=None,
                  preprocess_input=None,
                  data_format='channels_last',
                  validation_split=0.0,
                  dtype='float32'):
-                 
+        
+        self.featurewise_center = featurewise_center
+        self.samplewise_center = samplewise_center
+        self.featurewise_std_normalization = featurewise_std_normalization
+        self.samplewise_std_normalization = samplewise_std_normalization
+        self.zca_whitening = zca_whitening         
         self.transform = transform
         self.rescale = rescale
         self.preprocess_input = preprocess_input
@@ -81,7 +91,11 @@ class ImageDataAugmentor(Sequence):
                 '`validation_split` must be strictly between 0 and 1. '
                 ' Received: %s' % validation_split)
         self._validation_split = validation_split
-    
+        
+        self.mean = None
+        self.std = None
+        self.principal_components = None
+        
     def flow(self,
              x,
              y=None,
@@ -492,8 +506,8 @@ class ImageDataAugmentor(Sequence):
         # Returns
             The inputs, normalized.
         """
-        if self.preprocessing_function:
-            x = self.preprocessing_function(x)
+        if self.preprocess_input:
+            x = self.preprocess_input(x)
         if self.rescale:
             x *= self.rescale
         if self.samplewise_center:
@@ -533,7 +547,7 @@ class ImageDataAugmentor(Sequence):
     def transform_image(self, x):
         if self.transform:
             x = self.transform(image=x)['image']
-            x = standardize(x)
+            x = self.standardize(x)
         return x
          
     def fit(self, x,
