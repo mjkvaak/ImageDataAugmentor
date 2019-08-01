@@ -74,12 +74,12 @@ class DataFrameIterator(BatchFromFilesMixin, Iterator):
             (if `save_to_dir` is set).
         subset: Subset of data (`"training"` or `"validation"`) if
             validation_split is set in ImageDataGenerator.
-        interpolation: Interpolation method used to resample the image if the
+        interpolation: Interpolation method used to
+            resample the image if the
             target size is different from that of the loaded image.
-            Supported methods are "nearest", "bilinear", and "bicubic".
-            If PIL version 1.1.3 or newer is installed, "lanczos" is also
-            supported. If PIL version 3.4.0 or newer is installed, "box" and
-            "hamming" are also supported. By default, "nearest" is used.
+            Supported methods are `"cv2.INTER_NEAREST"`, `"cv2.INTER_LINEAR"`, `"cv2.INTER_AREA"`, `"cv2.INTER_CUBIC"`
+            and `"cv2.INTER_LANCZOS4"`
+            By default, `"cv2.INTER_NEAREST"` is used.
         dtype: Dtype to use for the generated arrays.
         validate_filenames: Boolean, whether to validate image filenames in
         `x_col`. If `True`, invalid images will be ignored. Disabling this option
@@ -108,7 +108,7 @@ class DataFrameIterator(BatchFromFilesMixin, Iterator):
                  save_prefix='',
                  save_format='png',
                  subset=None,
-                 interpolation='nearest',
+                 interpolation=cv2.INTER_NEAREST,
                  dtype='float32',
                  validate_filenames=True):
 
