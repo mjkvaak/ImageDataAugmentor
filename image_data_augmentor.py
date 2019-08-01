@@ -16,6 +16,14 @@ import threading
 import cv2    
 from keras.utils import Sequence, to_categorical
 import threading
+try:
+    import scipy
+    # scipy.linalg cannot be accessed until explicitly imported
+    from scipy import linalg
+    # scipy.ndimage cannot be accessed until explicitly imported
+except ImportError:
+    scipy = None
+
 
 from .dataframe_iterator import DataFrameIterator
 from .directory_iterator import DirectoryIterator
@@ -96,6 +104,33 @@ class ImageDataAugmentor(Sequence):
         self.std = None
         self.principal_components = None
         
+        if zca_whitening:
+            if not featurewise_center:
+                self.featurewise_center = True
+                warnings.warn('This ImageDataGenerator specifies '
+                              '`zca_whitening`, which overrides '
+                              'setting of `featurewise_center`.')
+            if featurewise_std_normalization:
+                self.featurewise_std_normalization = False
+                warnings.warn('This ImageDataGenerator specifies '
+                              '`zca_whitening` '
+                              'which overrides setting of'
+                              '`featurewise_std_normalization`.')
+        if featurewise_std_normalization:
+            if not featurewise_center:
+                self.featurewise_center = True
+                warnings.warn('This ImageDataGenerator specifies '
+                              '`featurewise_std_normalization`, '
+                              'which overrides setting of '
+                              '`featurewise_center`.')
+        if samplewise_std_normalization:
+            if not samplewise_center:
+                self.samplewise_center = True
+                warnings.warn('This ImageDataGenerator specifies '
+                              '`samplewise_std_normalization`, '
+                              'which overrides setting of '
+                              '`samplewise_center`.')
+                
     def flow(self,
              x,
              y=None,
