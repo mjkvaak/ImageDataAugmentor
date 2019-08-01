@@ -479,7 +479,7 @@ class ImageDataAugmentor(Sequence):
             validate_filenames=validate_filenames
         )
 
-     def standardize(self, x):
+    def standardize(self, x):
         """Applies the normalization configuration in-place to a batch of inputs.
         `x` is changed in-place since the function is mainly used internally
         to standarize images and feed them to your network. If a copy of `x`
