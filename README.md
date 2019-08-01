@@ -1,8 +1,8 @@
 # ImageDataAugmentor
 Custom image data generator supporting the modern augmentation modules (e.g. imgaug and albumentations) for Keras
 
- ```
-    Example of using `.flow_from_directory(directory)`:
+
+> Example of using `.flow_from_directory(directory)`:
     ```python
     
     transforms = albumentations.Compose([
