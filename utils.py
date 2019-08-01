@@ -8,7 +8,7 @@ import os
 import warnings
 
 import numpy as np
-
+import cv2
 try:
     from PIL import ImageEnhance
     from PIL import Image as pil_image
@@ -75,61 +75,26 @@ def save_img(path,
     img.save(path, format=file_format, **kwargs)
 
 
-def load_img(path, grayscale=False, color_mode='rgb', target_size=None,
-             interpolation='nearest'):
-    """Loads an image into PIL format.
-
-    # Arguments
-        path: Path to image file.
-        grayscale: DEPRECATED use `color_mode="grayscale"`.
-        color_mode: One of "grayscale", "rgb", "rgba". Default: "rgb".
-            The desired image format.
-        target_size: Either `None` (default to original size)
-            or tuple of ints `(img_height, img_width)`.
-        interpolation: Interpolation method used to resample the image if the
-            target size is different from that of the loaded image.
-            Supported methods are "nearest", "bilinear", and "bicubic".
-            If PIL version 1.1.3 or newer is installed, "lanczos" is also
-            supported. If PIL version 3.4.0 or newer is installed, "box" and
-            "hamming" are also supported. By default, "nearest" is used.
-
-    # Returns
-        A PIL Image instance.
-
-    # Raises
-        ImportError: if PIL is not available.
-        ValueError: if interpolation method is not supported.
-    """
-    if grayscale is True:
-        warnings.warn('grayscale is deprecated. Please use '
-                      'color_mode = "grayscale"')
-        color_mode = 'grayscale'
-    if pil_image is None:
-        raise ImportError('Could not import PIL.Image. '
-                          'The use of `load_img` requires PIL.')
-    img = pil_image.open(path)
-    if color_mode == 'grayscale':
-        if img.mode != 'L':
-            img = img.convert('L')
-    elif color_mode == 'rgba':
-        if img.mode != 'RGBA':
-            img = img.convert('RGBA')
-    elif color_mode == 'rgb':
-        if img.mode != 'RGB':
-            img = img.convert('RGB')
+def load_img(fname, color_mode='rgb', target_size=None, interpolation=cv2.INTER_NEAREST):
+    if color_mode == "rgb":
+        img = cv2.imread(fname)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        
+    elif color_mode == "rgba":
+        img = cv2.imread(fname,-1) 
+        if img.shape[-1]!=4: #Add alpha-channel if not RGBA
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGBA)
+            
+    elif color_mode == "gray":
+        img = cv2.imread(fname, 0)
+        
     else:
-        raise ValueError('color_mode must be "grayscale", "rgb", or "rgba"')
+        img = cv2.imread(fname)
+        
     if target_size is not None:
         width_height_tuple = (target_size[1], target_size[0])
-        if img.size != width_height_tuple:
-            if interpolation not in _PIL_INTERPOLATION_METHODS:
-                raise ValueError(
-                    'Invalid interpolation method {} specified. Supported '
-                    'methods are {}'.format(
-                        interpolation,
-                        ", ".join(_PIL_INTERPOLATION_METHODS.keys())))
-            resample = _PIL_INTERPOLATION_METHODS[interpolation]
-            img = img.resize(width_height_tuple, resample)
+        if img.shape[0:2] != width_height_tuple:
+            img = cv2.resize(img, dsize=width_height_tuple, interpolation = interpolation)
     return img
 
 
