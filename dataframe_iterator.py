@@ -8,6 +8,7 @@ import os
 import warnings
 
 import numpy as np
+import cv2
 
 from .iterator import BatchFromFilesMixin, Iterator
 from .utils import validate_filename
