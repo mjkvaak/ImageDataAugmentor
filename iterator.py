@@ -223,21 +223,16 @@ class BatchFromFilesMixin():
         # build batch of image data
         # self.filepaths is dynamic, is better to call it once outside the loop
         filepaths = self.filepaths
-        for i, j in enumerate(index_array):
-            img = load_img(filepaths[j],
-                           color_mode=self.color_mode,
-                           target_size=self.target_size,
-                           interpolation=self.interpolation)
-            x = img_to_array(img, data_format=self.data_format)
-            # Pillow images should be closed after `load_img`,
-            # but not PIL images.
-            if hasattr(img, 'close'):
-                img.close()
-            if self.image_data_generator:
-                params = self.image_data_generator.get_random_transform(x.shape)
-                x = self.image_data_generator.apply_transform(x, params)
-                x = self.image_data_generator.standardize(x)
-            batch_x[i] = x
+        
+        # build batch of image data
+        batch_x = np.array([load_img(filenames[x], 
+                                     color_mode=self.color_mode,
+                                     target_size=self.target_size, 
+                                     interpolation=self.interpolation) for x in index_array])    
+        # transform the image data
+        if self.image_data_generator:
+            batch_x = np.array([self.image_data_generator.transform_image(x) for x in batch_x])
+        
         # optionally save augmented images to disk for debugging purposes
         if self.save_to_dir:
             for i, j in enumerate(index_array):
