@@ -159,8 +159,11 @@ class ImageDataAugmentor(Sequence):
     
     def transform_image(self, x):
         if self.transform:
-            img = self.transform(x, params)['image']
-
+            img = self.transform(image=x)['image']
+            
+        if self.preprocess_input:
+            img = self.preprocess_input(x)
+            
         return img
     
        
@@ -190,7 +193,7 @@ class Iterator(object):
         self.index_array = np.arange(self.n)
         if self.shuffle:
             self.index_array = np.random.permutation(self.n)
-
+            
     def __getitem__(self, idx):
         if idx >= len(self):
             raise ValueError('Asked to retrieve element {idx}, '
@@ -218,6 +221,7 @@ class Iterator(object):
                     interpolation):
         self.image_data_generator = image_data_generator
         self.target_size = tuple(target_size)
+            
         if color_mode not in {'rgb', 'bgr', 'rgba', 'gray'}:
             raise ValueError('Invalid color mode:', color_mode,
                              '; expected "rgb", "bgr", "rgba", or "gray".')
@@ -270,7 +274,7 @@ class Iterator(object):
         # Ensure self.batch_index is 0.
         self.reset()
         while 1:
-            if self.seed is not None:
+            if self.seed:
                 np.random.seed(self.seed + self.total_batches_seen)
             if self.batch_index == 0:
                 self._set_index_array()
@@ -398,21 +402,7 @@ class FilelistIterator(Iterator):
        
         print('Found %d images belonging to %d classes.' %
               (self.samples, self.num_classes))
-
-        #print('Self.samples: {}'.format(self.samples))
-        #print('Self.classes - len: {0} - {1}'.format(self.classes[0],len(self.classes)))
-        #print('Self.filenames - len: {0} - {1}'.format(self.filenames[0],len(self.filenames)))
-        #print('Self.class_mode: {}'.format(self.class_mode))
-        #print('Self.num_classes: {}'.format(self.num_classes))
-        #print('Self.class_indices: {}'.format(self.class_indices))
-        
-        #Self.samples: 2000
-        #Self.classes - len: 0 - 2000
-        #Self.filenames - len: cats/cat.0.jpg - 2000
-        #Self.class_mode: binary
-        #Self.num_classes: 2
-        #Self.class_indices: {'cats': 0, 'dogs': 1}
-        
+       
         super(FilelistIterator, self).__init__(self.samples,
                                                batch_size,
                                                shuffle,
@@ -440,10 +430,12 @@ class FilelistIterator(Iterator):
         ##     batch_x[i] = x
         
         # build batch of image data
-        batch_x = np.array([load_img(self.filenames(x), 
-                                     color_mode=self.color_mode, 
-                                     target_size=self.target_size,
+        batch_x = np.array([load_img(self.filenames[x], 
+                                     color_mode=self.color_mode,
+                                     target_size=self.target_size, 
                                      interpolation=self.interpolation) for x in index_array])    
+        # transform the image data
+        batch_x = np.array([self.image_data_generator.transform_image(x) for x in batch_x])
         
         # optionally save augmented images to disk for debugging purposes
         if self.save_to_dir:
@@ -644,24 +636,24 @@ def save_img(path,
 ##     return img
         
 def load_img(fname, color_mode='rgb', target_size=None, interpolation=cv2.INTER_NEAREST):
-    if self.color_mode == "rgb":
+    if color_mode == "rgb":
         img = cv2.imread(fname)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         
-    elif self.color_mode == "rgba":
-        img = cv2.imread(fname,-1) #Assumes there is an alpha-channel
-        if img.shape[-1]!=4
+    elif color_mode == "rgba":
+        img = cv2.imread(fname,-1) 
+        if img.shape[-1]!=4: #Add alpha-channel if not RGBA
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGBA)
             
-    elif self.color_mode == "gray":
+    elif color_mode == "gray":
         img = cv2.imread(fname, 0)
         
     else:
         img = cv2.imread(fname)
         
-     if target_size is not None:
-         width_height_tuple = (target_size[1], target_size[0])
-         if img.shape[0:2] != width_height_tuple:
+    if target_size is not None:
+        width_height_tuple = (target_size[1], target_size[0])
+        if img.shape[0:2] != width_height_tuple:
             img = cv2.resize(img, dsize=width_height_tuple, interpolation = interpolation)
     return img
        
