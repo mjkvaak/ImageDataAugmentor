@@ -1,3 +1,4 @@
+## Code adapted from https://github.com/davidfreire/Augmentation_project
 import numpy as np
 import threading
 import cv2    
