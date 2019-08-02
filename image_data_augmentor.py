@@ -386,8 +386,7 @@ class ImageDataAugmentor(Sequence):
             follow_links=follow_links,
             subset=subset,
             interpolation=interpolation)
-    
-    
+        
     def flow_from_dataframe(self,
                             dataframe,
                             directory=None,
