@@ -8,6 +8,7 @@ import os
 import threading
 import numpy as np
 from keras_preprocessing import get_keras_submodule
+import matplotlib.pyplot as plt
 
 try:
     IteratorType = get_keras_submodule('utils').Sequence
@@ -244,6 +245,7 @@ class BatchFromFilesMixin():
                     format=self.save_format)
                 img.save(os.path.join(self.save_to_dir, fname))
         # build batch of labels
+            
         if self.class_mode == 'input':
             batch_y = batch_x.copy()
         elif self.class_mode in {'binary', 'sparse'}:
@@ -265,7 +267,33 @@ class BatchFromFilesMixin():
             return batch_x, batch_y
         else:
             return batch_x, batch_y, self.sample_weight[index_array]
+    
+    def show_batch(self, rows:int=5, **kwargs):
+        img_arr = np.random.choice(range(len(self.classes)), rows**2)
+        imgs, _ = self._get_batches_of_transformed_samples(img_arr)
+        lbls = self.labels[img_arr]
+        try:
+            inv_class_indices = {v: k for k, v in self.class_indices.items()}
+            lbls = [inv_class_indices.get(k) for k in lbls]
+        except Exception as e:
+            print(e)
+            pass
+        
+        if not 'figsize' in kwargs:
+            kwargs['figsize'] = (12,12)
 
+        plt.close('all')
+        plt.figure(**kwargs)
+
+        for idx, img in enumerate(imgs):
+            plt.subplot(rows, rows, idx+1)
+            plt.imshow(img)
+            plt.title(lbls[idx])
+            plt.axis('off')
+        
+        plt.subplots_adjust(hspace=0.5, wspace=0.5)
+        plt.show()
+        
     @property
     def filepaths(self):
         """List of absolute paths to image files"""
