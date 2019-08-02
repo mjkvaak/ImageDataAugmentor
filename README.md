@@ -1,6 +1,9 @@
 # ImageDataAugmentor
 Custom image data generator supporting the modern augmentation modules (e.g. imgaug and albumentations) for Keras
 
+# *Code heavily adapted from:* https://github.com/keras-team/keras-preprocessing/blob/master/keras_preprocessing/
+
+
 The usage is analogous to Keras ImageDataGenerator with the exception that the image transformations will be generated with an external augmentations module. 
 
 > Example of using `.flow_from_directory(directory)` with `albumentations`:
