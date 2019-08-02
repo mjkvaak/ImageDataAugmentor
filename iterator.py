@@ -271,7 +271,7 @@ class BatchFromFilesMixin():
     def show_batch(self, rows:int=5, **kwargs):
         img_arr = np.random.choice(range(len(self.classes)), rows**2)
         imgs, _ = self._get_batches_of_transformed_samples(img_arr)
-        lbls = self.labels[img_arr]
+        lbls = np.array(self.labels)[img_arr]
         try:
             inv_class_indices = {v: k for k, v in self.class_indices.items()}
             lbls = [inv_class_indices.get(k) for k in lbls]
