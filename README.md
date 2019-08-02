@@ -9,8 +9,7 @@ The usage is analogous to Keras ImageDataGenerator with the exception that the i
     import albumentations
     
     ...
-    
-    
+        
     transform = albumentations.Compose([
         albumentations.Transpose(p=0.5),
         albumentations.Flip(p=0.5),
