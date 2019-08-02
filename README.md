@@ -6,6 +6,12 @@ This code is heavily adapted from: https://github.com/keras-team/keras-preproces
 
 The usage is analogous to Keras ImageDataGenerator with the exception that the image transformations will be generated with an external augmentations module. 
 
+To learn more about:
+* ImageDataGenerator, see: https://keras.io/preprocessing/image/
+* albumentations, see: https://github.com/albu/albumentations
+* imgaug, see: https://github.com/aleju/imgaug
+
+
 > Example of using `.flow_from_directory(directory)` with `albumentations`:
 
     from ImageDataAugmentor.image_data_augmentor import *
