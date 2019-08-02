@@ -102,13 +102,13 @@ For similar projects, see:
     
 
 
-CITE (BibTex):
+CITE (BibTex):<br />
 
-@misc{mjkvaak_aug,
-author = {Tukiainen, M.},
-title = {ImageDataAugmentor},
-year = {2019},
-publisher = {GitHub},
-journal = {GitHub repository},
-howpublished = {\url{https://github.com/mjkvaak/ImageDataAugmentor/}}
+@misc{mjkvaak_aug,<br />
+author = {Tukiainen, M.},<br />
+title = {ImageDataAugmentor},<br />
+year = {2019},<br />
+publisher = {GitHub},<br />
+journal = {GitHub repository},<br />
+howpublished = {\url{https://github.com/mjkvaak/ImageDataAugmentor/}}<br />
 }
