@@ -1,6 +1,8 @@
-## Code adapted from:
-## *https://github.com/davidfreire/Augmentation_project
+## Code heavily adapted from:
 ## *https://github.com/keras-team/keras-preprocessing/blob/master/keras_preprocessing/
+
+## For similar projects, see also:
+## *https://github.com/davidfreire/Augmentation_project
 
 """Utilities for real-time data augmentation on image data.
 """
