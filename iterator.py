@@ -225,12 +225,12 @@ class BatchFromFilesMixin():
         filepaths = self.filepaths
         
         # build batch of image data
-        batch_x = np.array([load_img(filenames[x], 
+        batch_x = np.array([load_img(filepaths[x], 
                                      color_mode=self.color_mode,
                                      target_size=self.target_size, 
                                      interpolation=self.interpolation) for x in index_array])    
         # transform the image data
-        if self.image_data_generator:
+        if self.image_data_generator.transform_image:
             batch_x = np.array([self.image_data_generator.transform_image(x) for x in batch_x])
         
         # optionally save augmented images to disk for debugging purposes
