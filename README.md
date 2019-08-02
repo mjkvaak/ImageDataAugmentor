@@ -110,5 +110,5 @@ title = {ImageDataAugmentor},<br />
 year = {2019},<br />
 publisher = {GitHub},<br />
 journal = {GitHub repository},<br />
-howpublished = {\url{https://github.com/mjkvaak/ImageDataAugmentor/}} <br />
+howpublished = {https://github.com/mjkvaak/ImageDataAugmentor/} <br />
 }
