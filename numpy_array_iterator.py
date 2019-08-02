@@ -146,13 +146,12 @@ class NumpyArrayIterator(Iterator):
     def _get_batches_of_transformed_samples(self, index_array):
         batch_x = np.zeros(tuple([len(index_array)] + list(self.x.shape)[1:]),
                            dtype=self.dtype)
-        for i, j in enumerate(index_array):
-            x = self.x[j]
-            params = self.image_data_generator.get_random_transform(x.shape)
-            x = self.image_data_generator.apply_transform(
-                x.astype(self.dtype), params)
-            x = self.image_data_generator.standardize(x)
-            batch_x[i] = x
+        
+        # build batch of image data
+        batch_x = np.array([self.x[j] for j in index_array])    
+        
+        # transform the image data
+        batch_x = np.array([self.image_data_generator.transform_image(x) for x in batch_x])
 
         if self.save_to_dir:
             for i, j in enumerate(index_array):
