@@ -135,6 +135,8 @@ class DataFrameIterator(BatchFromFilesMixin, Iterator):
             num_classes = len(classes)
             # build an index of all the unique classes
             self.class_indices = dict(zip(classes, range(len(classes))))
+        self.num_classes = num_classes
+        
         # retrieve only training or validation set
         if self.split:
             num_files = len(df)
