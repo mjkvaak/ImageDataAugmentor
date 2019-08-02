@@ -101,7 +101,7 @@ For similar projects, see:
                         steps_per_epoch=len(x_train) / 32, epochs=epochs)
     
 
-
+<br /><br /><br />
 CITE (BibTex):<br />
 
 @misc{mjkvaak_aug,<br />
@@ -110,5 +110,5 @@ title = {ImageDataAugmentor},<br />
 year = {2019},<br />
 publisher = {GitHub},<br />
 journal = {GitHub repository},<br />
-howpublished = {\url{https://github.com/mjkvaak/ImageDataAugmentor/}}<br />
+howpublished = {\url{https://github.com/mjkvaak/ImageDataAugmentor/}} <br />
 }
