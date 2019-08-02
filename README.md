@@ -4,7 +4,7 @@ Custom image data generator supporting the modern augmentation modules (e.g. img
 
 > Example of using `.flow_from_directory(directory)`:
     
-    transforms = albumentations.Compose([
+    transform = albumentations.Compose([
         albumentations.Transpose(p=0.5),
         albumentations.Flip(p=0.5),
         albumentations.OneOf([
