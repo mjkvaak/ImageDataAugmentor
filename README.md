@@ -11,6 +11,8 @@ To learn more about:
 * albumentations, see: https://github.com/albu/albumentations
 * imgaug, see: https://github.com/aleju/imgaug
 
+For similar projects, see:
+* https://github.com/davidfreire/Augmentation_project <- a generator that accepts both external and Keras internal augmentations
 
 > Example of using `.flow_from_directory(directory)` with `albumentations`:
 
@@ -98,3 +100,15 @@ To learn more about:
     model.fit_generator(datagen.flow(x_train, y_train, batch_size=32),
                         steps_per_epoch=len(x_train) / 32, epochs=epochs)
     
+
+
+CITE (BibTex):
+
+@misc{mjkvaak_aug,
+author = {Tukiainen, M.},
+title = {ImageDataAugmentor},
+year = {2019},
+publisher = {GitHub},
+journal = {GitHub repository},
+howpublished = {\url{https://github.com/mjkvaak/ImageDataAugmentor/}}
+}
