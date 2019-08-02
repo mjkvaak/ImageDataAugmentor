@@ -67,19 +67,18 @@ To learn more about:
     ...
     
     sometimes = lambda aug: iaa.Sometimes(0.5, aug)
-    seq = iaa.Sequential(
-        [
-            # apply the following augmenters to most images
-            iaa.Fliplr(0.5), # horizontally flip 50% of all images
-            iaa.Flipud(0.2), # vertically flip 20% of all images
-            sometimes(iaa.Affine(
-                scale={"x": (0.9, 1.1), "y": (0.9, 1.1)}, # scale images to 90-110% of their size, individually per axis
-                translate_percent={"x": (-0.1, 0.1), "y": (-0.1, 0.1)}, # translate by -10 to +10 percent (per axis)
-                rotate=(-45, 45), # rotate by -45 to +45 degrees
-                shear=(-5, 5), # shear by -5 to +5 degrees
-                mode=ia.ALL # use any of scikit-image's warping modes
-            )),
-        ],
+    seq = iaa.Sequential([
+        apply the following augmenters to most images
+        iaa.Fliplr(0.5), # horizontally flip 50% of all images
+        iaa.Flipud(0.2), # vertically flip 20% of all images
+        sometimes(iaa.Affine(
+            scale={"x": (0.9, 1.1), "y": (0.9, 1.1)}, # scale images to 90-110% of their size, individually per axis
+            translate_percent={"x": (-0.1, 0.1), "y": (-0.1, 0.1)}, # translate by -10 to +10 percent (per axis)
+            rotate=(-45, 45), # rotate by -45 to +45 degrees
+            shear=(-5, 5), # shear by -5 to +5 degrees
+            mode=ia.ALL # use any of scikit-image's warping modes
+        )
+        )],
         random_order=True)    
     transform = seq.augment_image
     
