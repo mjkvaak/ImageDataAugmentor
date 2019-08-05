@@ -18,6 +18,8 @@ import threading
 import cv2    
 from keras.utils import Sequence, to_categorical
 import threading
+import random
+
 try:
     import scipy
     # scipy.linalg cannot be accessed until explicitly imported
@@ -64,7 +66,8 @@ class ImageDataAugmentor(Sequence):
                  featurewise_std_normalization=False,
                  samplewise_std_normalization=False,
                  zca_whitening=False,
-                 transform = None,
+                 augment = None,
+                 augment_seed = None,
                  rescale=None,
                  preprocess_input=None,
                  data_format='channels_last',
@@ -76,10 +79,11 @@ class ImageDataAugmentor(Sequence):
         self.featurewise_std_normalization = featurewise_std_normalization
         self.samplewise_std_normalization = samplewise_std_normalization
         self.zca_whitening = zca_whitening         
-        self.transform = transform
+        self.augment = augment
         self.rescale = rescale
         self.preprocess_input = preprocess_input
         self.dtype = dtype
+        self.augment_seed = augment_seed
         
         if data_format not in {'channels_last', 'channels_first'}:
             raise ValueError(
@@ -446,6 +450,7 @@ class ImageDataAugmentor(Sequence):
             validate_filenames=validate_filenames
         )
 
+    
     def standardize(self, x):
         """Applies the normalization configuration in-place to a batch of inputs.
         `x` is changed in-place since the function is mainly used internally
@@ -497,10 +502,14 @@ class ImageDataAugmentor(Sequence):
                               'first by calling `.fit(numpy_data)`.')
         return x
     
+    
     def transform_image(self, image, mask=None):
+        if self.augment_seed:
+            random.seed(self.augment_seed)
+        
         if mask is not None:
-            if self.transform:
-                data = self.transform(image=image, mask=mask)
+            if self.augment:
+                data = self.augment(image=image, mask=mask)
                 image = data['image']
                 mask = data['mask']
                 
@@ -509,14 +518,13 @@ class ImageDataAugmentor(Sequence):
             return image, mask
         
         else:
-            if self.transform:
-                image = self.transform(image=image)['image']
+            if self.augment:
+                image = self.augment(image=image)['image']
             
             image = self.standardize(image)
             
             return image
         
-       
          
     def fit(self, x,
             augment=False,
@@ -557,6 +565,7 @@ class ImageDataAugmentor(Sequence):
                 ' channels).')
 
         if seed is not None:
+            random.seed(seed)
             np.random.seed(seed)
 
         x = np.copy(x)
@@ -566,7 +575,7 @@ class ImageDataAugmentor(Sequence):
                 dtype=self.dtype)
             for r in range(rounds):
                 for i in range(x.shape[0]):
-                    ax[i + r * x.shape[0]] = self.random_transform(x[i])
+                    ax[i + r * x.shape[0]] = self.augment(x[i])
             x = ax
 
         if self.featurewise_center:
