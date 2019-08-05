@@ -305,90 +305,7 @@ class ImageDataAugmentor(Sequence):
             interpolation=interpolation
         )
     
-    def flow_from_filelist(self, file_list, label_list,
-                           target_size=(256, 256), color_mode='rgb',
-                           classes=None, class_mode='categorical',
-                           batch_size=32, shuffle=True, seed=None,
-                           save_to_dir=None,
-                           save_prefix='',
-                           save_format='png',
-                           follow_links=False,
-                           subset=None,
-                           interpolation=cv2.INTER_NEAREST):
-        """Takes the path to a directory & generates batches of augmented data.
-        # Arguments
-            file_list: List of the target samples.
-            label_list: List of the target labels.
-            target_size: Tuple of integers `(height, width)`,
-                default: `(256, 256)`.
-                The dimensions to which all images found will be resized.
-            color_mode: One of "gray", "rbg", "rgba". Default: "rgb".
-                Whether the images will be converted to
-                have 1, 3, or 4 channels.
-            classes: Optional list of class subdirectories
-                (e.g. `['dogs', 'cats']`). Default: None.
-                If not provided, the list of classes will be automatically
-                inferred from the label_list variable
-                (and the order of the classes, which will map to the label
-                indices, will be alphanumeric).
-                The dictionary containing the mapping from class names to class
-                indices can be obtained via the attribute `class_indices`.
-            class_mode: One of "categorical", "binary", "sparse",
-                "input", or None. Default: "categorical".
-                Determines the type of label arrays that are returned:
-                - "categorical" will be 2D one-hot encoded labels,
-                - "binary" will be 1D binary labels,
-                    "sparse" will be 1D integer labels,
-                - "input" will be images identical
-                    to input images (mainly used to work with autoencoders).
-                - If None, no labels are returned
-                  (the generator will only yield batches of image data,
-                  which is useful to use with `model.predict_generator()`,
-                  `model.evaluate_generator()`, etc.).
-                  Please note that in case of class_mode None,
-                  the data still needs to reside in a subdirectory
-                  of `directory` for it to work correctly.
-            batch_size: Size of the batches of data (default: 32).
-            shuffle: Whether to shuffle the data (default: True)
-            seed: Optional random seed for shuffling and transformations.
-            save_to_dir: None or str (default: None).
-                This allows you to optionally specify
-                a directory to which to save
-                the augmented pictures being generated
-                (useful for visualizing what you are doing).
-            save_prefix: Str. Prefix to use for filenames of saved pictures
-                (only relevant if `save_to_dir` is set).
-            save_format: One of "png", "jpeg"
-                (only relevant if `save_to_dir` is set). Default: "png".
-            follow_links: Whether to follow symlinks inside
-                class subdirectories (default: False).
-            subset: Subset of data (`"training"` or `"validation"`) if
-                `validation_split` is set in `ImageDataGenerator`.
-            interpolation: Interpolation method used to
-                resample the image if the
-                target size is different from that of the loaded image.
-                Supported methods are `"cv2.INTER_NEAREST"`, `"cv2.INTER_LINEAR"`, `"cv2.INTER_AREA"`, `"cv2.INTER_CUBIC"`
-                and `"cv2.INTER_LANCZOS4"`
-                By default, `"cv2.INTER_NEAREST"` is used.
-        # Returns
-            A `FilelistIterator` yielding tuples of `(x, y)`
-                where `x` is a numpy array containing a batch
-                of images with shape `(batch_size, *target_size, channels)`
-                and `y` is a numpy array of corresponding labels.
-        """
-        return FilelistIterator(
-            file_list, label_list, self,
-            target_size=target_size, color_mode=color_mode,
-            classes=classes, class_mode=class_mode,
-            data_format=self.data_format,
-            batch_size=batch_size, shuffle=shuffle, seed=seed,
-            save_to_dir=save_to_dir,
-            save_prefix=save_prefix,
-            save_format=save_format,
-            follow_links=follow_links,
-            subset=subset,
-            interpolation=interpolation)
-        
+          
     def flow_from_dataframe(self,
                             dataframe,
                             directory=None,
@@ -580,12 +497,26 @@ class ImageDataAugmentor(Sequence):
                               'first by calling `.fit(numpy_data)`.')
         return x
     
-    def transform_image(self, x):
-        if self.transform:
-            x = self.transform(image=x)['image']
+    def transform_image(self, image, mask=None):
+        if mask is not None:
+            if self.transform:
+                data = self.transform(image=image, mask=mask)
+                image = data['image']
+                mask = data['mask']
+                
+                image = self.standardize(image)
+                
+            return image, mask
         
-        x = self.standardize(x)
-        return x
+        else:
+            if self.transform:
+                image = self.transform(image=image)['image']
+            
+            image = self.standardize(image)
+            
+            return image
+        
+       
          
     def fit(self, x,
             augment=False,

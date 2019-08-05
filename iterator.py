@@ -220,7 +220,6 @@ class BatchFromFilesMixin():
         # Returns
             A batch of transformed samples.
         """
-        batch_x = np.zeros((len(index_array),) + self.image_shape, dtype=self.dtype)
         # build batch of image data
         # self.filepaths is dynamic, is better to call it once outside the loop
         filepaths = self.filepaths
@@ -269,13 +268,17 @@ class BatchFromFilesMixin():
     
     def show_batch(self, rows:int=5, **kwargs):
         img_arr = np.random.choice(range(len(self.classes)), rows**2)
-        imgs, _ = self._get_batches_of_transformed_samples(img_arr)
+        if self.class_mode is None:
+            imgs = self._get_batches_of_transformed_samples(img_arr)
+        else:
+            imgs, _ = self._get_batches_of_transformed_samples(img_arr)
         lbls = np.array(self.labels)[img_arr]
+        
         try:
             inv_class_indices = {v: k for k, v in self.class_indices.items()}
             lbls = [inv_class_indices.get(k) for k in lbls]
-        except Exception as e:
-            print(e)
+        except:
+            lbls = None
             pass
         
         if not 'figsize' in kwargs:
@@ -287,7 +290,8 @@ class BatchFromFilesMixin():
         for idx, img in enumerate(imgs):
             plt.subplot(rows, rows, idx+1)
             plt.imshow(img)
-            plt.title(lbls[idx])
+            if lbls is not None:
+                plt.title(lbls[idx])
             plt.axis('off')
         
         plt.subplots_adjust(hspace=0.5, wspace=0.5)

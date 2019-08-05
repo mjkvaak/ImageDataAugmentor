@@ -7,6 +7,7 @@ from __future__ import print_function
 import os
 import warnings
 import numpy as np
+import matplotlib.pyplot as plt
 
 from .iterator import Iterator
 from .utils import array_to_img
@@ -144,14 +145,23 @@ class NumpyArrayIterator(Iterator):
                                                  seed)
 
     def _get_batches_of_transformed_samples(self, index_array):
-        batch_x = np.zeros(tuple([len(index_array)] + list(self.x.shape)[1:]),
-                           dtype=self.dtype)
         
         # build batch of image data
-        batch_x = np.array([self.x[j] for j in index_array])    
+        batch_x = np.array([self.x[j] for j in index_array])
+        if self.y is not None:
+            batch_y = np.array([self.y[j] for j in index_array])
         
+        else:
+            batch_y = np.array([])
+            
         # transform the image data
-        batch_x = np.array([self.image_data_generator.transform_image(x) for x in batch_x])
+        if batch_y.shape == batch_x.shape: #<- y-labels passed as masks
+            data = np.array([self.image_data_generator.transform_image(image=x,mask=y) for x,y in zip(batch_x, batch_y)])
+            batch_x = data[:,0]
+            batch_y = data[:,1]
+            
+        else:
+            batch_x = np.array([self.image_data_generator.transform_image(x) for x in batch_x])
 
         if self.save_to_dir:
             for i, j in enumerate(index_array):
@@ -167,7 +177,40 @@ class NumpyArrayIterator(Iterator):
                   else [batch_x] + batch_x_miscs,)
         if self.y is None:
             return output[0]
-        output += (self.y[index_array],)
+
+        output += (batch_y,)
         if self.sample_weight is not None:
             output += (self.sample_weight[index_array],)
         return output
+
+    def show_batch(self, rows:int=5, **kwargs):
+        img_arr = np.random.choice(range(len(self.x)), rows**2)
+        if self.y is None:
+            imgs = self._get_batches_of_transformed_samples(img_arr)
+            lbls = None
+        else:
+            imgs, lbls = self._get_batches_of_transformed_samples(img_arr)
+            if imgs.shape == lbls.shape:
+                lbls = None
+        # try changing categorical labels into flat
+        try:
+            lbls = np.argmax(lbls, axis=1)
+        except:
+            lbls = None
+            pass
+        
+        if not 'figsize' in kwargs:
+            kwargs['figsize'] = (12,12)
+
+        plt.close('all')
+        plt.figure(**kwargs)
+
+        for idx, img in enumerate(imgs):
+            plt.subplot(rows, rows, idx+1)
+            plt.imshow(img)
+            if lbls is not None:
+                plt.title(lbls[idx])
+            plt.axis('off')
+        
+        plt.subplots_adjust(hspace=0.5, wspace=0.5)
+        plt.show()
