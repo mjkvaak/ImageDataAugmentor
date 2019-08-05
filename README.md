@@ -103,8 +103,7 @@ For similar projects, see:
 > Example of using `.flow_from_directory()` with masks for segmentation with `albumentations`:
     
     from ImageDataAugmentor.image_data_augmentor import *
-    from imgaug import augmenters as iaa
-    import imgaug as ia
+    import albumentations
     
     ...
     
