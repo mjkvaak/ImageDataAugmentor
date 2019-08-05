@@ -21,7 +21,7 @@ For similar projects, see:
     
     ...
         
-    transform = albumentations.Compose([
+    AUGMENTATIONS = albumentations.Compose([
         albumentations.Transpose(p=0.5),
         albumentations.Flip(p=0.5),
         albumentations.OneOf([
@@ -35,7 +35,7 @@ For similar projects, see:
     
     train_datagen = ImageDataAugmentor(
             rescale=1./255,
-            transform = transform,
+            augment = AUGMENTATIONS,
             preprocess_input=None)
             
     test_datagen = ImageDataAugmentor(rescale=1./255)
@@ -82,16 +82,16 @@ For similar projects, see:
         )
         )],
         random_order=True)    
-    transform = seq.augment_image
+    AUGMENTATIONS = seq.augment_image
     
     (x_train, y_train), (x_test, y_test) = cifar10.load_data()
     y_train = np_utils.to_categorical(y_train, num_classes)
     y_test = np_utils.to_categorical(y_test, num_classes)
     
-    datagen = ImageDataGenerator(
+    datagen = ImageDataAugmentor(
         featurewise_center=True,
         featurewise_std_normalization=True,
-        transform = transform)
+        augment = AUGMENTATIONS)
     
     # compute quantities required for featurewise normalization
     datagen.fit(x_train)
@@ -100,6 +100,33 @@ For similar projects, see:
     model.fit_generator(datagen.flow(x_train, y_train, batch_size=32),
                         steps_per_epoch=len(x_train) / 32, epochs=epochs)
     
+> Example of using `.flow_from_directory()` with masks for segmentation with `albumentations`:
+    
+    from ImageDataAugmentor.image_data_augmentor import *
+    from imgaug import augmenters as iaa
+    import imgaug as ia
+    
+    ...
+    
+    AUGMENTATIONS = albumentations.Compose([
+        albumentations.HorizontalFlip(p=0.5),
+        albumentations.ElasticTransform(),
+    ])
+    
+    data_gen = ImageDataAugmentor(augment=AUGMENTATIONS, augment_seed=123)
+    img_gen = data_gen.flow_from_directory('../data/tmp/images/', class_mode=None, shuffle=True, seed=123)
+    mask_gen = = data_gen.flow_from_directory('../data/tmp/masks/', class_mode=None, shuffle=True, seed=123)
+    
+    train_gen = zip(img_gen, mask_gen)
+    
+    # Visualize images
+    k = 3
+    image_batch, mask_batch = next(train_gen)
+    fix, ax = plt.subplots(k,2, figsize=(k*2,10))
+    for i in range(k):
+        ax[i,0].imshow(image_batch[i,:,:,0])
+        ax[i,1].imshow(mask_batch[i,:,:,0])
+    plt.show()
 
 <br /><br /><br />
 CITE (BibTex):<br />
