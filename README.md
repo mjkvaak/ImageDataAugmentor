@@ -113,7 +113,7 @@ For similar projects, see:
     img_data_gen = ImageDataAugmentor(augment=AUGMENTATIONS, augment_seed=123)
     img_gen = img_data_gen.flow_from_directory('../data/images/', class_mode=None, shuffle=True, seed=123)
     mask_data_gen = ImageDataAugmentor(augment=AUGMENTATIONS, augment_seed=123, augment_mode='mask')
-    mask_gen = = data_gen.flow_from_directory('../data/masks/', class_mode=None, shuffle=True, seed=123)
+    mask_gen = mask_data_gen.flow_from_directory('../data/masks/', class_mode=None, shuffle=True, seed=123)
     
     train_gen = zip(img_gen, mask_gen)
     
