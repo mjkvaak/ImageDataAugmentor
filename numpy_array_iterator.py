@@ -148,20 +148,15 @@ class NumpyArrayIterator(Iterator):
         
         # build batch of image data
         batch_x = np.array([self.x[j] for j in index_array])
+        
+        # transform the image data
+        batch_x = np.array([self.image_data_generator.transform_image(x) for x in batch_x])
+        
         if self.y is not None:
             batch_y = np.array([self.y[j] for j in index_array])
         
         else:
             batch_y = np.array([])
-            
-        # transform the image data
-        if batch_y.shape == batch_x.shape: #<- y-labels passed as masks
-            data = np.array([self.image_data_generator.transform_image(image=x,mask=y) for x,y in zip(batch_x, batch_y)])
-            batch_x = data[:,0]
-            batch_y = data[:,1]
-            
-        else:
-            batch_x = np.array([self.image_data_generator.transform_image(x) for x in batch_x])
 
         if self.save_to_dir:
             for i, j in enumerate(index_array):

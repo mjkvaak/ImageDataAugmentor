@@ -66,8 +66,9 @@ class ImageDataAugmentor(Sequence):
                  featurewise_std_normalization=False,
                  samplewise_std_normalization=False,
                  zca_whitening=False,
-                 augment = None,
-                 augment_seed = None,
+                 augment=None,
+                 augment_seed=None,
+                 augment_mode='image',
                  rescale=None,
                  preprocess_input=None,
                  data_format='channels_last',
@@ -80,10 +81,13 @@ class ImageDataAugmentor(Sequence):
         self.samplewise_std_normalization = samplewise_std_normalization
         self.zca_whitening = zca_whitening         
         self.augment = augment
+        self.augment_seed = augment_seed
+        self.augment_mode = augment_mode
         self.rescale = rescale
         self.preprocess_input = preprocess_input
         self.dtype = dtype
-        self.augment_seed = augment_seed
+        self.total_transformations_done = 0
+       
         
         if data_format not in {'channels_last', 'channels_first'}:
             raise ValueError(
@@ -503,35 +507,48 @@ class ImageDataAugmentor(Sequence):
         return x
     
     
-    def transform_image(self, image, mask=None):
-        if self.augment_seed:
-            random.seed(self.augment_seed)
-        
-        if mask is not None:
+    def transform_image(self, image):
+
+            
+        if self.augment_mode=='mask':
             if self.augment:
                 if 'albumentations' in str(type(self.augment)):
-                    data = self.augment(image=image, mask=mask)
+                    if self.augment_seed:
+                        random.seed(self.augment_seed+self.total_transformations_done)
+                    data = self.augment(image=np.zeros_like(image), mask=image)
                     image = data['image']
                     mask = data['mask']
                     
-                    image = self.standardize(image)
-                    
-                    return image, mask
-                
                 elif 'imgaug' in str(type(self.augment)):
-                    ## imgaug doesn't yet support mask generation
-                    raise NotImplementedError
+                    warnings.warn('imgaug does not yet support mask generation.'
+                                  'The mask was generated using the augmentations provided:'
+                                  'make sure they are good for mask generation')
+                    
+                    if self.augment_seed:
+                        warnings.warn('Make sure to call imgaug augmentations with `.to_deterministic()` to ensure'
+                                      'that images and masks are augmented correctly')  
+                    mask = self.augment(image=image)
+                
+                self.total_transformations_done+=1
+                return mask
+            
                 
         else:
             if self.augment:
-                image = self.augment(image=image)
-                
                 if 'albumentations' in str(type(self.augment)):
+                    if self.augment_seed:
+                        random.seed(self.augment_seed+self.total_transformations_done)
+                        
+                    image = self.augment(image=image)    
                     image = image['image']
                 
-            
+                elif 'imgaug' in str(type(self.augment)):
+                                            
+                    image = self.augment(image=image)
+                    
             image = self.standardize(image)
             
+            self.total_transformations_done+=1
             return image
         
          
