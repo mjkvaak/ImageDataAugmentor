@@ -98,7 +98,7 @@ For similar projects, see:
     model.fit_generator(datagen.flow(x_train, y_train, batch_size=32),
                         steps_per_epoch=len(x_train) / 32, epochs=epochs)
     
-> Example of using `.flow_from_directory()` with masks for segmentation with `albumentations`:
+> Example of using `.flow_from_directory()` with masks for segmentation with `albumentations` (\*):
     
     from ImageDataAugmentor.image_data_augmentor import *
     import albumentations
@@ -110,8 +110,9 @@ For similar projects, see:
         albumentations.ElasticTransform(),
     ])
     
-    data_gen = ImageDataAugmentor(augment=AUGMENTATIONS, augment_seed=123)
-    img_gen = data_gen.flow_from_directory('../data/images/', class_mode=None, shuffle=True, seed=123)
+    img_data_gen = ImageDataAugmentor(augment=AUGMENTATIONS, augment_seed=123)
+    img_gen = img_data_gen.flow_from_directory('../data/images/', class_mode=None, shuffle=True, seed=123)
+    mask_data_gen = ImageDataAugmentor(augment=AUGMENTATIONS, augment_seed=123, augment_mode='mask')
     mask_gen = = data_gen.flow_from_directory('../data/masks/', class_mode=None, shuffle=True, seed=123)
     
     train_gen = zip(img_gen, mask_gen)
@@ -124,6 +125,9 @@ For similar projects, see:
         ax[i,0].imshow(image_batch[i,:,:,0])
         ax[i,1].imshow(mask_batch[i,:,:,0])
     plt.show()
+
+(\*) Currently the segmentation masks should be generated using `albumentations` rather than `imgaug`. If you are using `imgaug`, make sure that all augmentations are fit for mask generation and remember to call `.to_deterministic()` to ensure that both the images and the mask are generated with same transformations.
+
 
 <br /><br /><br />
 CITE (BibTex):<br />
