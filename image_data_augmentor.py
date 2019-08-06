@@ -67,8 +67,8 @@ class ImageDataAugmentor(Sequence):
                  samplewise_std_normalization=False,
                  zca_whitening=False,
                  augment=None,
-                 augment_seed=None,
                  augment_mode='image',
+                 augment_seed=None,
                  rescale=None,
                  preprocess_input=None,
                  data_format='channels_last',
@@ -83,6 +83,12 @@ class ImageDataAugmentor(Sequence):
         self.augment = augment
         self.augment_seed = augment_seed
         self.augment_mode = augment_mode
+        if self.augment_mode == 'mask' and self.augment_seed == None:
+            warnings.warn('This ImageDataAugmentor uses `augment_mode=mask` '
+                          'but no `augment_seed` was given. Setting `augment_seed=0`.'
+                         )
+            self.augment_seed = 0
+            
         self.rescale = rescale
         self.preprocess_input = preprocess_input
         self.dtype = dtype
@@ -520,13 +526,14 @@ class ImageDataAugmentor(Sequence):
                     mask = data['mask']
                     
                 elif 'imgaug' in str(type(self.augment)):
-                    warnings.warn('imgaug does not yet support mask generation.'
-                                  'The mask was generated using the augmentations provided:'
-                                  'make sure they are good for mask generation')
+                    warnings.warn('imgaug does not yet support mask generation: consider using albumentations instead.'
+                                  'The masks were generated using the augmentations provided:'
+                                  'make sure they are fit for mask generation.')
                     
                     if self.augment_seed:
-                        warnings.warn('Make sure to call imgaug augmentations with `.to_deterministic()` to ensure'
-                                      'that images and masks are augmented correctly')  
+                        warnings.warn('You are using `imgaug` for mask generation.'
+                                      'Make sure to call imgaug augmentations with `.to_deterministic()` to ensure'
+                                      'that images and masks are augmented correctly together.')  
                     mask = self.augment(image=image)
                 
                 self.total_transformations_done+=1
