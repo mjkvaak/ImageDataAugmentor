@@ -509,17 +509,26 @@ class ImageDataAugmentor(Sequence):
         
         if mask is not None:
             if self.augment:
-                data = self.augment(image=image, mask=mask)
-                image = data['image']
-                mask = data['mask']
+                if 'albumentations' in str(type(self.augment)):
+                    data = self.augment(image=image, mask=mask)
+                    image = data['image']
+                    mask = data['mask']
+                    
+                    image = self.standardize(image)
+                    
+                    return image, mask
                 
-                image = self.standardize(image)
+                elif 'imgaug' in str(type(self.augment)):
+                    ## imgaug doesn't yet support mask generation
+                    raise NotImplementedError
                 
-            return image, mask
-        
         else:
             if self.augment:
-                image = self.augment(image=image)['image']
+                image = self.augment(image=image)
+                
+                if 'albumentations' in str(type(self.augment)):
+                    image = image['image']
+                
             
             image = self.standardize(image)
             
