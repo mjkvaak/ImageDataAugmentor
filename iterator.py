@@ -147,7 +147,7 @@ class BatchFromFilesMixin():
         """Sets attributes to use later for processing files into a batch.
 
         # Arguments
-            image_data_generator: Instance of `ImageDataGenerator`
+            image_data_generator: Instance of `ImageDataAugmentor`
                 to use for random transformations and normalization.
             target_size: tuple of integers, dimensions to resize input images to.
             color_mode: One of `"rgb"`, `"rgba"`, `"gray"`.
@@ -162,7 +162,7 @@ class BatchFromFilesMixin():
             save_format: Format to use for saving sample images
                 (if `save_to_dir` is set).
             subset: Subset of data (`"training"` or `"validation"`) if
-                validation_split is set in ImageDataGenerator.
+                validation_split is set in ImageDataAugmentor.
             interpolation: Interpolation method used to
                 resample the image if the
                 target size is different from that of the loaded image.

@@ -23,7 +23,7 @@ class NumpyArrayIterator(Iterator):
             each of which gets passed
             through as an output without any modifications.
         y: Numpy array of targets data.
-        image_data_generator: Instance of `ImageDataGenerator`
+        image_data_generator: Instance of `ImageDataAugmentor`
             to use for random transformations and normalization.
         batch_size: Integer, size of a batch.
         shuffle: Boolean, whether to shuffle the data between epochs.
@@ -39,7 +39,7 @@ class NumpyArrayIterator(Iterator):
         save_format: Format to use for saving sample images
             (if `save_to_dir` is set).
         subset: Subset of data (`"training"` or `"validation"`) if
-            validation_split is set in ImageDataGenerator.
+            validation_split is set in ImageDataAugmentor.
         dtype: Dtype to use for the generated arrays.
     """
 

@@ -24,7 +24,7 @@ class DirectoryIterator(BatchFromFilesMixin, Iterator):
             considered to contain images from one class,
             or alternatively you could specify class subdirectories
             via the `classes` argument.
-        image_data_generator: Instance of `ImageDataGenerator`
+        image_data_generator: Instance of `ImageDataAugmentor`
             to use for random transformations and normalization.
         target_size: tuple of integers, dimensions to resize input images to.
         color_mode: One of `"rgb"`, `"rgba"`, `"gray"`.
@@ -54,7 +54,7 @@ class DirectoryIterator(BatchFromFilesMixin, Iterator):
             (if `save_to_dir` is set).
         follow_links: boolean,follow symbolic links to subdirectories
         subset: Subset of data (`"training"` or `"validation"`) if
-            validation_split is set in ImageDataGenerator.
+            validation_split is set in ImageDataAugmentor.
         interpolation: Interpolation method used to
             resample the image if the
             target size is different from that of the loaded image.

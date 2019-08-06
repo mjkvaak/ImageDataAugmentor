@@ -44,8 +44,16 @@ class ImageDataAugmentor(Sequence):
         preprocessing_input: function that will be implied on each input.
             The function will run after the image is resized and augmented.
             The function should take one argument:
-            one image (Numpy tensor with rank 3),
-            and should output a Numpy tensor with the same shape.
+            one image, and should output a Numpy tensor with the same shape.
+        augment: augmentations passed as albumentations or imgaug transformation 
+            or sequence of transformations.
+        augment_seed: makes augmentations from albumentations deterministic.
+            Notice! imgaug uses input seeds so to make the transformations deterministic,
+            use ia.seed(X) or call transformations with .to_deterministic().
+        augment_mode: should be either 'image' or 'mask'. If latter, only the 
+            albumentation transformation relevant for segmentation mask augmentation will be use.
+            Notice! In imgaug the 'mask'-mode cannot be selected, so you have to sure that your augmentations
+            are fit for mask generation (e.g. no noise generation/color manipulation).        
         data_format: Image data format,
             either "channels_first" or "channels_last".
             "channels_last" mode means that the images should have shape
@@ -123,26 +131,26 @@ class ImageDataAugmentor(Sequence):
         if zca_whitening:
             if not featurewise_center:
                 self.featurewise_center = True
-                warnings.warn('This ImageDataGenerator specifies '
+                warnings.warn('This ImageDataAugmentor specifies '
                               '`zca_whitening`, which overrides '
                               'setting of `featurewise_center`.')
             if featurewise_std_normalization:
                 self.featurewise_std_normalization = False
-                warnings.warn('This ImageDataGenerator specifies '
+                warnings.warn('This ImageDataAugmentor specifies '
                               '`zca_whitening` '
                               'which overrides setting of'
                               '`featurewise_std_normalization`.')
         if featurewise_std_normalization:
             if not featurewise_center:
                 self.featurewise_center = True
-                warnings.warn('This ImageDataGenerator specifies '
+                warnings.warn('This ImageDataAugmentor specifies '
                               '`featurewise_std_normalization`, '
                               'which overrides setting of '
                               '`featurewise_center`.')
         if samplewise_std_normalization:
             if not samplewise_center:
                 self.samplewise_center = True
-                warnings.warn('This ImageDataGenerator specifies '
+                warnings.warn('This ImageDataAugmentor specifies '
                               '`samplewise_std_normalization`, '
                               'which overrides setting of '
                               '`samplewise_center`.')
@@ -187,7 +195,7 @@ class ImageDataAugmentor(Sequence):
             save_format: one of "png", "jpeg"
                 (only relevant if `save_to_dir` is set). Default: "png".
             subset: Subset of data (`"training"` or `"validation"`) if
-                `validation_split` is set in `ImageDataGenerator`.
+                `validation_split` is set in `ImageDataAugmentor`.
         # Returns
             An `Iterator` yielding tuples of `(x, y)`
                 where `x` is a numpy array of image data
@@ -284,7 +292,7 @@ class ImageDataAugmentor(Sequence):
             follow_links: Whether to follow symlinks inside
                 class subdirectories (default: False).
             subset: Subset of data (`"training"` or `"validation"`) if
-                `validation_split` is set in `ImageDataGenerator`.
+                `validation_split` is set in `ImageDataAugmentor`.
             interpolation: Interpolation method used to
                 resample the image if the
                 target size is different from that of the loaded image.
@@ -403,7 +411,7 @@ class ImageDataAugmentor(Sequence):
             follow_links: whether to follow symlinks inside class subdirectories
                 (default: False).
             subset: Subset of data (`"training"` or `"validation"`) if
-                `validation_split` is set in `ImageDataGenerator`.
+                `validation_split` is set in `ImageDataAugmentor`.
             interpolation: Interpolation method used to resample the image if the
                 target size is different from that of the loaded image.
                 Supported methods are `"nearest"`, `"bilinear"`, and `"bicubic"`.
@@ -487,7 +495,7 @@ class ImageDataAugmentor(Sequence):
             if self.mean is not None:
                 x -= self.mean
             else:
-                warnings.warn('This ImageDataGenerator specifies '
+                warnings.warn('This ImageDataAugmentor specifies '
                               '`featurewise_center`, but it hasn\'t '
                               'been fit on any training data. Fit it '
                               'first by calling `.fit(numpy_data)`.')
@@ -495,7 +503,7 @@ class ImageDataAugmentor(Sequence):
             if self.std is not None:
                 x /= (self.std + 1e-6)
             else:
-                warnings.warn('This ImageDataGenerator specifies '
+                warnings.warn('This ImageDataAugmentor specifies '
                               '`featurewise_std_normalization`, '
                               'but it hasn\'t '
                               'been fit on any training data. Fit it '
@@ -506,7 +514,7 @@ class ImageDataAugmentor(Sequence):
                 whitex = np.dot(flatx, self.principal_components)
                 x = np.reshape(whitex, x.shape)
             else:
-                warnings.warn('This ImageDataGenerator specifies '
+                warnings.warn('This ImageDataAugmentor specifies '
                               '`zca_whitening`, but it hasn\'t '
                               'been fit on any training data. Fit it '
                               'first by calling `.fit(numpy_data)`.')
@@ -514,7 +522,8 @@ class ImageDataAugmentor(Sequence):
     
     
     def transform_image(self, image):
-
+        """
+        """
             
         if self.augment_mode=='mask':
             if self.augment:
@@ -546,11 +555,9 @@ class ImageDataAugmentor(Sequence):
                     if self.augment_seed:
                         random.seed(self.augment_seed+self.total_transformations_done)
                         
-                    image = self.augment(image=image)    
-                    image = image['image']
+                    image = self.augment(image=image)['image']    
                 
                 elif 'imgaug' in str(type(self.augment)):
-                                            
                     image = self.augment(image=image)
                     
             image = self.standardize(image)

@@ -34,7 +34,7 @@ class DataFrameIterator(BatchFromFilesMixin, Iterator):
             - if `class_mode` is `"input"` or `None` no extra column is needed.
         directory: string, path to the directory to read images from. If `None`,
             data in `x_col` column should be absolute paths.
-        image_data_generator: Instance of `ImageDataGenerator` to use for
+        image_data_generator: Instance of `ImageDataAugmentor` to use for
             random transformations and normalization. If None, no transformations
             and normalizations are made.
         x_col: string, column in `dataframe` that contains the filenames (or
@@ -74,7 +74,7 @@ class DataFrameIterator(BatchFromFilesMixin, Iterator):
         save_format: Format to use for saving sample images
             (if `save_to_dir` is set).
         subset: Subset of data (`"training"` or `"validation"`) if
-            validation_split is set in ImageDataGenerator.
+            validation_split is set in ImageDataAugmentor.
         interpolation: Interpolation method used to
             resample the image if the
             target size is different from that of the loaded image.
