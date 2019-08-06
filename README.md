@@ -69,8 +69,7 @@ For similar projects, see:
     ...
     
     sometimes = lambda aug: iaa.Sometimes(0.5, aug)
-    seq = iaa.Sequential([
-        apply the following augmenters to most images
+    AUGMENTATIONS = iaa.Sequential([
         iaa.Fliplr(0.5), # horizontally flip 50% of all images
         iaa.Flipud(0.2), # vertically flip 20% of all images
         sometimes(iaa.Affine(
@@ -82,7 +81,6 @@ For similar projects, see:
         )
         )],
         random_order=True)    
-    AUGMENTATIONS = seq.augment_image
     
     (x_train, y_train), (x_test, y_test) = cifar10.load_data()
     y_train = np_utils.to_categorical(y_train, num_classes)
