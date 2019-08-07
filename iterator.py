@@ -289,7 +289,7 @@ class BatchFromFilesMixin():
 
         for idx, img in enumerate(imgs):
             plt.subplot(rows, rows, idx+1)
-            plt.imshow(img)
+            plt.imshow(img.squeeze())
             if lbls is not None:
                 plt.title(lbls[idx])
             plt.axis('off')
