@@ -526,7 +526,7 @@ class ImageDataAugmentor(Sequence):
         """
             
         if self.augment_mode=='mask':
-            if self.augment:
+            if self.augment is not None:
                 if 'albumentations' in str(type(self.augment)):
                     if self.augment_seed:
                         random.seed(self.augment_seed+self.total_transformations_done)
@@ -538,7 +538,7 @@ class ImageDataAugmentor(Sequence):
                                   'The masks were generated using the augmentations provided:'
                                   'make sure they are fit for mask generation.')
                     
-                    if self.augment_seed:
+                    if self.augment_seed is not None:
                         warnings.warn('You are using `imgaug` for mask generation.'
                                       'Make sure to call imgaug augmentations with `.to_deterministic()` to ensure'
                                       'that images and masks are augmented correctly together.')  
@@ -550,9 +550,9 @@ class ImageDataAugmentor(Sequence):
             
                 
         else:
-            if self.augment:
+            if self.augment is not None:
                 if 'albumentations' in str(type(self.augment)):
-                    if self.augment_seed:
+                    if self.augment_seed is not None:
                         random.seed(self.augment_seed+self.total_transformations_done)
                         
                     image = self.augment(image=image)['image']    
@@ -563,6 +563,7 @@ class ImageDataAugmentor(Sequence):
             image = self.standardize(image)
             
             self.total_transformations_done+=1
+            
             return image
         
          
