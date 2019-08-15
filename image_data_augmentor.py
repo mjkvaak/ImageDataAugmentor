@@ -531,8 +531,7 @@ class ImageDataAugmentor(Sequence):
                     if self.augment_seed:
                         random.seed(self.augment_seed+self.total_transformations_done)
                     data = self.augment(image=np.zeros_like(image), mask=image)
-                    image = data['image']
-                    mask = data['mask']
+                    image = data['mask']
                     
                 elif 'imgaug' in str(type(self.augment)):
                     warnings.warn('imgaug does not yet support mask generation: consider using albumentations instead.'
@@ -543,10 +542,11 @@ class ImageDataAugmentor(Sequence):
                         warnings.warn('You are using `imgaug` for mask generation.'
                                       'Make sure to call imgaug augmentations with `.to_deterministic()` to ensure'
                                       'that images and masks are augmented correctly together.')  
-                    mask = self.augment(image=image)
+                    image = self.augment(image=image)
                 
                 self.total_transformations_done+=1
-                return mask
+                
+                return image
             
                 
         else:
