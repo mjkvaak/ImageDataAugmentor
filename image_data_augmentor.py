@@ -543,7 +543,8 @@ class ImageDataAugmentor(Sequence):
                                       'Make sure to call imgaug augmentations with `.to_deterministic()` to ensure'
                                       'that images and masks are augmented correctly together.')  
                     image = self.augment(image=image)
-                
+               
+                image = self.standardize(image)
                 self.total_transformations_done+=1
                 
                 return image
