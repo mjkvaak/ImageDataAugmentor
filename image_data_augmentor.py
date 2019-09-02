@@ -485,11 +485,11 @@ class ImageDataAugmentor(Sequence):
         if self.preprocess_input:
             x = self.preprocess_input(x)
         if self.rescale:
-            x *= self.rescale
+            x = np.multiply(x, self.rescale)
         if self.samplewise_center:
-            x -= np.mean(x, keepdims=True)
+            x = x-np.mean(x, keepdims=True)
         if self.samplewise_std_normalization:
-            x /= (np.std(x, keepdims=True) + 1e-6)
+            x = np.divide(x, (np.std(x, keepdims=True) + 1e-6))
 
         if self.featurewise_center:
             if self.mean is not None:
@@ -523,6 +523,7 @@ class ImageDataAugmentor(Sequence):
     
     def transform_image(self, image):
         """
+        Add comments
         """
             
         if self.augment_mode=='mask':
@@ -547,9 +548,6 @@ class ImageDataAugmentor(Sequence):
                 image = self.standardize(image)
                 self.total_transformations_done+=1
                 
-                return image
-            
-                
         else:
             if self.augment is not None:
                 if 'albumentations' in str(type(self.augment)):
@@ -565,7 +563,7 @@ class ImageDataAugmentor(Sequence):
             
             self.total_transformations_done+=1
             
-            return image
+        return image
         
          
     def fit(self, x,
@@ -625,14 +623,14 @@ class ImageDataAugmentor(Sequence):
             broadcast_shape = [1, 1, 1]
             broadcast_shape[self.channel_axis - 1] = x.shape[self.channel_axis]
             self.mean = np.reshape(self.mean, broadcast_shape)
-            x -= self.mean
+            x = x- self.mean
 
         if self.featurewise_std_normalization:
             self.std = np.std(x, axis=(0, self.row_axis, self.col_axis))
             broadcast_shape = [1, 1, 1]
             broadcast_shape[self.channel_axis - 1] = x.shape[self.channel_axis]
             self.std = np.reshape(self.std, broadcast_shape)
-            x /= (self.std + 1e-6)
+            x = np.divide(x, (self.std + 1e-6))
 
         if self.zca_whitening:
             if scipy is None:
