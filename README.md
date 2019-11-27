@@ -126,7 +126,7 @@ For similar projects, see:
         ax[i,1].imshow(mask_batch[i,:,:,0])
     plt.show()
 
-(\*) Currently the segmentation masks should be generated using `albumentations` rather than `imgaug`. If you are using `imgaug`, make sure that all augmentations are fit for mask generation and remember to call `.to_deterministic()` to ensure that both the images and the mask are generated with same transformations.
+(\*) Currently the segmentation masks should be generated using `albumentations` rather than `imgaug`. If you'd still wish to use `imgaug`, make sure that all augmentations are meaningful for both image and mask generation (e.g. no noise augmentations for masks!) and remember to call `.to_deterministic()` to ensure that both the images and the mask are augmented with same transformations.
 
 
 <br /><br /><br />
