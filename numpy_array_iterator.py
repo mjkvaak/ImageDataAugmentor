@@ -144,13 +144,14 @@ class NumpyArrayIterator(Iterator):
                                                  shuffle,
                                                  seed)
 
-    def _get_batches_of_transformed_samples(self, index_array):
+    def _get_batch_of_samples(self, index_array, apply_transform=True):
         
         # build batch of image data
         batch_x = np.array([self.x[j] for j in index_array])
         
         # transform the image data
-        batch_x = np.array([self.image_data_generator.transform_image(x) for x in batch_x])
+        if apply_transform:
+            batch_x = np.array([self.image_data_generator.transform_image(x) for x in batch_x])
         
         if self.y is not None:
             batch_y = np.array([self.y[j] for j in index_array])
@@ -178,27 +179,27 @@ class NumpyArrayIterator(Iterator):
             output += (self.sample_weight[index_array],)
         return output
 
-    def show_batch(self, rows:int=5, **kwargs):
+    def _get_batches_of_transformed_samples(self, index_array):
+        return self._get_batch_of_samples(index_array)
+
+    def show_batch(self, rows:int=5, apply_transform:bool=False, **plt_kwargs):
         img_arr = np.random.choice(range(len(self.x)), rows**2)
         if self.y is None:
-            imgs = self._get_batches_of_transformed_samples(img_arr)
+            imgs = self._get_batch_of_samples(img_arr, apply_transform=apply_transform)
             lbls = None
         else:
-            imgs, lbls = self._get_batches_of_transformed_samples(img_arr)
-            if imgs.shape == lbls.shape:
+            imgs, lbls = self._get_batch_of_samples(img_arr)
+
+            try:
+                lbls = np.argmax(lbls, axis=1)
+            except:
                 lbls = None
-        # try changing categorical labels into flat
-        try:
-            lbls = np.argmax(lbls, axis=1)
-        except:
-            lbls = None
-            pass
-        
-        if not 'figsize' in kwargs:
-            kwargs['figsize'] = (12,12)
+
+        if not 'figsize' in plt_kwargs:
+            plt_kwargs['figsize'] = (12,12)
 
         plt.close('all')
-        plt.figure(**kwargs)
+        plt.figure(**plt_kwargs)
 
         for idx, img in enumerate(imgs):
             plt.subplot(rows, rows, idx+1)

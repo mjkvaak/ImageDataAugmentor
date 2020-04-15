@@ -1,0 +1,4 @@
+opencv-python>=4.2
+matplotlib
+Pillow
+scipy

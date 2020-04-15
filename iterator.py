@@ -23,7 +23,7 @@ from .utils import (array_to_img,
 class Iterator(IteratorType):
     """Base class for image data iterators.
 
-    Every `Iterator` must implement the `_get_batches_of_transformed_samples`
+    Every `Iterator` must implement the `_get_batch_of_samples`
     method.
 
     # Arguments
@@ -211,7 +211,7 @@ class BatchFromFilesMixin():
         self.split = split
         self.subset = subset
 
-    def _get_batches_of_transformed_samples(self, index_array):
+    def _get_batch_of_samples(self, index_array, apply_transform=True):
         """Gets a batch of transformed samples.
 
         # Arguments
@@ -230,7 +230,8 @@ class BatchFromFilesMixin():
                                      target_size=self.target_size, 
                                      interpolation=self.interpolation) for x in index_array])    
         # transform the image data
-        batch_x = np.array([self.image_data_generator.transform_image(x) for x in batch_x])
+        if apply_transform:
+            batch_x = np.array([self.image_data_generator.transform_image(x) for x in batch_x])
         
         # optionally save augmented images to disk for debugging purposes
         if self.save_to_dir:
@@ -265,27 +266,30 @@ class BatchFromFilesMixin():
             return batch_x, batch_y
         else:
             return batch_x, batch_y, self.sample_weight[index_array]
-    
-    def show_batch(self, rows:int=5, **kwargs):
+
+    def _get_batches_of_transformed_samples(self, index_array ):
+        return self._get_batch_of_samples(index_array)
+
+
+    def show_batch(self, rows:int=5, apply_transform:bool=False, **plt_kwargs):
         img_arr = np.random.choice(range(len(self.classes)), rows**2)
         if self.class_mode is None:
-            imgs = self._get_batches_of_transformed_samples(img_arr)
+            imgs = self._get_batch_of_samples(img_arr, apply_transform=apply_transform)
         else:
-            imgs, _ = self._get_batches_of_transformed_samples(img_arr)
-        lbls = np.array(self.labels)[img_arr]
+            imgs, _ = self._get_batch_of_samples(img_arr, apply_transform=apply_transform)
+            lbls = np.array(self.labels)[img_arr]
         
-        try:
-            inv_class_indices = {v: k for k, v in self.class_indices.items()}
-            lbls = [inv_class_indices.get(k) for k in lbls]
-        except:
-            lbls = None
-            pass
+            try:
+                inv_class_indices = {v: k for k, v in self.class_indices.items()}
+                lbls = [inv_class_indices.get(k) for k in lbls]
+            except:
+                pass
         
-        if not 'figsize' in kwargs:
-            kwargs['figsize'] = (12,12)
+        if not 'figsize' in plt_kwargs:
+            plt_kwargs['figsize'] = (12,12)
 
         plt.close('all')
-        plt.figure(**kwargs)
+        plt.figure(**plt_kwargs)
 
         for idx, img in enumerate(imgs):
             plt.subplot(rows, rows, idx+1)

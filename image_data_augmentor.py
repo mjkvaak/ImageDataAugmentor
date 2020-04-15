@@ -14,20 +14,13 @@ import warnings
 from six.moves import range
 
 import numpy as np
-import threading
-import cv2    
-from keras.utils import Sequence, to_categorical
-import threading
 import random
 
-try:
-    import scipy
-    # scipy.linalg cannot be accessed until explicitly imported
-    from scipy import linalg
-    # scipy.ndimage cannot be accessed until explicitly imported
-except ImportError:
-    scipy = None
+import scipy
+from scipy import linalg
 
+import cv2
+from keras.utils import Sequence
 
 from .dataframe_iterator import DataFrameIterator
 from .directory_iterator import DirectoryIterator
@@ -93,7 +86,7 @@ class ImageDataAugmentor(Sequence):
         self.augment_mode = augment_mode
         if self.augment_mode == 'mask' and self.augment_seed == None:
             warnings.warn('This ImageDataAugmentor uses `augment_mode=mask` '
-                          'but no `augment_seed` was given. Setting `augment_seed=0`.'
+                          'but no `augment_seed` was given. FYI: setting `augment_seed=0`.'
                          )
             self.augment_seed = 0
             
@@ -468,7 +461,50 @@ class ImageDataAugmentor(Sequence):
             validate_filenames=validate_filenames
         )
 
-    
+    def transform_image(self, image):
+        """
+        Transforms an image by first augmenting and then standardizing
+        """
+
+        if self.augment_mode == 'mask':
+            if self.augment is not None:
+                if 'albumentations' in str(type(self.augment)):
+                    if self.augment_seed:
+                        random.seed(self.augment_seed + self.total_transformations_done)
+                    data = self.augment(image=np.zeros_like(image), mask=image)
+                    image = data['mask']
+
+                elif 'imgaug' in str(type(self.augment)):
+                    warnings.warn('(Our) `imgaug` support for mask generation is poor: consider using `albumentations` instead.'
+                                  'The masks will be generated using all the augmentations you provided:'
+                                  'make sure they are suitable for mask generation.')
+
+                    if self.augment_seed is not None:
+                        warnings.warn('Make sure to call the `imgaug` augmentations with `.to_deterministic()` to ensure'
+                                      'that images and masks are augmented correctly together.')
+                    image = self.augment(image=image)
+
+                image = self.standardize(image)
+                self.total_transformations_done += 1
+
+        else:
+            if self.augment is not None:
+                if 'albumentations' in str(type(self.augment)):
+                    if self.augment_seed is not None:
+                        random.seed(self.augment_seed + self.total_transformations_done)
+
+                    image = self.augment(image=image)['image']
+
+                elif 'imgaug' in str(type(self.augment)):
+                    image = self.augment(image=image)
+
+            image = self.standardize(image)
+
+            self.total_transformations_done += 1
+
+        return image
+
+
     def standardize(self, x):
         """Applies the normalization configuration in-place to a batch of inputs.
         `x` is changed in-place since the function is mainly used internally
@@ -519,52 +555,7 @@ class ImageDataAugmentor(Sequence):
                               'been fit on any training data. Fit it '
                               'first by calling `.fit(numpy_data)`.')
         return x
-    
-    
-    def transform_image(self, image):
-        """
-        Add comments
-        """
-            
-        if self.augment_mode=='mask':
-            if self.augment is not None:
-                if 'albumentations' in str(type(self.augment)):
-                    if self.augment_seed:
-                        random.seed(self.augment_seed+self.total_transformations_done)
-                    data = self.augment(image=np.zeros_like(image), mask=image)
-                    image = data['mask']
-                    
-                elif 'imgaug' in str(type(self.augment)):
-                    warnings.warn('imgaug does not yet support mask generation: consider using albumentations instead.'
-                                  'The masks were generated using the augmentations provided:'
-                                  'make sure they are fit for mask generation.')
-                    
-                    if self.augment_seed is not None:
-                        warnings.warn('You are using `imgaug` for mask generation.'
-                                      'Make sure to call imgaug augmentations with `.to_deterministic()` to ensure'
-                                      'that images and masks are augmented correctly together.')  
-                    image = self.augment(image=image)
-               
-                image = self.standardize(image)
-                self.total_transformations_done+=1
-                
-        else:
-            if self.augment is not None:
-                if 'albumentations' in str(type(self.augment)):
-                    if self.augment_seed is not None:
-                        random.seed(self.augment_seed+self.total_transformations_done)
-                        
-                    image = self.augment(image=image)['image']    
-                
-                elif 'imgaug' in str(type(self.augment)):
-                    image = self.augment(image=image)
-                    
-            image = self.standardize(image)
-            
-            self.total_transformations_done+=1
-            
-        return image
-        
+
          
     def fit(self, x,
             augment=False,
