@@ -5,7 +5,7 @@ ImageDataAugmentor is a custom image data generator for Keras supporting the use
 The code is heavily adapted from: https://github.com/keras-team/keras-preprocessing/blob/master/keras_preprocessing/
 
 ### Installation
-```$ pip install ImageDataAugmentor```
+```$ pip install git+https://github.com/mjkvaak/ImageDataAugmentor```
 
 ### Examples
 The usage is analogous to Keras' `ImageDataGenerator` with the exception that the image transformations will be generated with an external augmentations module. 

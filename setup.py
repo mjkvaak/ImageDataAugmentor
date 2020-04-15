@@ -36,7 +36,7 @@ except:
 
 # What packages are optional?
 EXTRAS = {
-    'tests': [pandas],
+    'tests': ['pandas'],
 }
 
 # Import the README and use it as the long-description.
