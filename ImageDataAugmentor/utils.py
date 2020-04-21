@@ -87,7 +87,6 @@ def load_img(fname, color_mode='rgb', target_size=None, interpolation=cv2.INTER_
             
     elif color_mode == "gray":
         img = cv2.imread(fname, 0)
-        img = img[...,np.newaxis] #Add dummy axis
 
     else:
         img = cv2.imread(fname)
@@ -96,7 +95,12 @@ def load_img(fname, color_mode='rgb', target_size=None, interpolation=cv2.INTER_
         width_height_tuple = (target_size[1], target_size[0])
         if img.shape[0:2] != width_height_tuple:
             img = cv2.resize(img, dsize=width_height_tuple, interpolation = interpolation)
-    return img
+
+    if color_mode == "gray":
+        return img[..., np.newaxis] #Add dummy axis. This is done here, cause `cv2.resize` removes the dummy axes
+
+    else:
+        return img
 
 
 def list_pictures(directory, ext=('jpg', 'jpeg', 'bmp', 'png', 'ppm', 'tif',

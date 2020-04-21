@@ -144,14 +144,13 @@ class NumpyArrayIterator(Iterator):
                                                  shuffle,
                                                  seed)
 
-    def _get_batch_of_samples(self, index_array, apply_transform=True):
+    def _get_batch_of_samples(self, index_array, apply_standardization=True):
         
         # build batch of image data
         batch_x = np.array([self.x[j] for j in index_array])
         
-        # transform the image data
-        if apply_transform:
-            batch_x = np.array([self.image_data_generator.transform_image(x) for x in batch_x])
+        # apply the augmentations and custom transformations to the image data
+        batch_x = np.array([self.image_data_generator.transform_image(x, standardize=apply_standardization) for x in batch_x])
         
         if self.y is not None:
             batch_y = np.array([self.y[j] for j in index_array])
@@ -182,13 +181,13 @@ class NumpyArrayIterator(Iterator):
     def _get_batches_of_transformed_samples(self, index_array):
         return self._get_batch_of_samples(index_array)
 
-    def show_batch(self, rows:int=5, apply_transform:bool=False, **plt_kwargs):
+    def show_batch(self, rows:int=5, apply_standardization:bool=False, **plt_kwargs):
         img_arr = np.random.choice(range(len(self.x)), rows**2)
         if self.y is None:
-            imgs = self._get_batch_of_samples(img_arr, apply_transform=apply_transform)
+            imgs = self._get_batch_of_samples(img_arr, apply_standardization=apply_standardization)
             lbls = None
         else:
-            imgs, lbls = self._get_batch_of_samples(img_arr)
+            imgs, lbls = self._get_batch_of_samples(img_arr, apply_standardization=apply_standardization)
 
             try:
                 lbls = np.argmax(lbls, axis=1)

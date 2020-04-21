@@ -461,7 +461,7 @@ class ImageDataAugmentor(Sequence):
             validate_filenames=validate_filenames
         )
 
-    def transform_image(self, image):
+    def transform_image(self, image, standardize=True):
         """
         Transforms an image by first augmenting and then standardizing
         """
@@ -484,7 +484,8 @@ class ImageDataAugmentor(Sequence):
                                       'that images and masks are augmented correctly together.')
                     image = self.augment(image=image)
 
-                image = self.standardize(image)
+                if standardize:
+                    image = self.standardize(image)
                 self.total_transformations_done += 1
 
         else:
@@ -498,8 +499,8 @@ class ImageDataAugmentor(Sequence):
                 elif 'imgaug' in str(type(self.augment)):
                     image = self.augment(image=image)
 
-            image = self.standardize(image)
-
+            if standardize:
+                image = self.standardize(image)
             self.total_transformations_done += 1
 
         return image

@@ -211,7 +211,7 @@ class BatchFromFilesMixin():
         self.split = split
         self.subset = subset
 
-    def _get_batch_of_samples(self, index_array, apply_transform=True):
+    def _get_batch_of_samples(self, index_array, apply_standardization=True):
         """Gets a batch of transformed samples.
 
         # Arguments
@@ -229,10 +229,14 @@ class BatchFromFilesMixin():
                                      color_mode=self.color_mode,
                                      target_size=self.target_size, 
                                      interpolation=self.interpolation) for x in index_array])    
-        # transform the image data
-        if apply_transform:
-            batch_x = np.array([self.image_data_generator.transform_image(x) for x in batch_x])
-        
+
+        # apply the augmentations and custom transformations to the image data
+        batch_x = np.array([self.image_data_generator.transform_image(x, standardize=apply_standardization) for x in batch_x])
+
+        # transform to `channels_first` format if needed
+        if self.data_format == "channels_first":
+            batch_x = np.array([np.swapaxes(x,0,2) for x in batch_x])
+
         # optionally save augmented images to disk for debugging purposes
         if self.save_to_dir:
             for i, j in enumerate(index_array):
@@ -267,16 +271,16 @@ class BatchFromFilesMixin():
         else:
             return batch_x, batch_y, self.sample_weight[index_array]
 
-    def _get_batches_of_transformed_samples(self, index_array ):
+    def _get_batches_of_transformed_samples(self, index_array):
         return self._get_batch_of_samples(index_array)
 
 
-    def show_batch(self, rows:int=5, apply_transform:bool=False, **plt_kwargs):
+    def show_batch(self, rows:int=5, apply_standardization:bool=False, **plt_kwargs):
         img_arr = np.random.choice(range(len(self.classes)), rows**2)
         if self.class_mode is None:
-            imgs = self._get_batch_of_samples(img_arr, apply_transform=apply_transform)
+            imgs = self._get_batch_of_samples(img_arr, apply_standardization=apply_standardization)
         else:
-            imgs, _ = self._get_batch_of_samples(img_arr, apply_transform=apply_transform)
+            imgs, _ = self._get_batch_of_samples(img_arr, apply_standardization=apply_standardization)
             lbls = np.array(self.labels)[img_arr]
         
             try:
@@ -284,7 +288,10 @@ class BatchFromFilesMixin():
                 lbls = [inv_class_indices.get(k) for k in lbls]
             except:
                 pass
-        
+
+        if self.data_format == "channels_first":
+            imgs = np.array([np.swapaxes(img,0,2) for img in imgs])
+
         if not 'figsize' in plt_kwargs:
             plt_kwargs['figsize'] = (12,12)
 
