@@ -150,7 +150,7 @@ class BatchFromFilesMixin():
             image_data_generator: Instance of `ImageDataAugmentor`
                 to use for random transformations and normalization.
             target_size: tuple of integers, dimensions to resize input images to.
-            color_mode: One of `"rgb"`, `"rgba"`, `"gray"`.
+            color_mode: One of `"rgb"`, `"rgba"`, `"grayscale"`.
                 Color mode to read images.
             data_format: String, one of `channels_first`, `channels_last`.
             save_to_dir: Optional directory where to save the pictures
@@ -172,9 +172,9 @@ class BatchFromFilesMixin():
         """
         self.image_data_generator = image_data_generator
         self.target_size = tuple(target_size)
-        if color_mode not in {'rgb', 'rgba', 'gray'}:
+        if color_mode not in {'rgb', 'rgba', 'grayscale'}:
             raise ValueError('Invalid color mode:', color_mode,
-                             '; expected "rgb", "rgba", or "gray".')
+                             '; expected "rgb", "rgba", or "grayscale".')
         self.color_mode = color_mode
         self.data_format = data_format
         if self.color_mode == 'rgba':

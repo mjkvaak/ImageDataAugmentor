@@ -242,7 +242,7 @@ class ImageDataAugmentor(Sequence):
             target_size: Tuple of integers `(height, width)`,
                 default: `(256, 256)`.
                 The dimensions to which all images found will be resized.
-            color_mode: One of "gray", "rgb", "rgba". Default: "rgb".
+            color_mode: One of "grayscale", "rgb", "rgba". Default: "rgb".
                 Whether the images will be converted to
                 have 1, 3, or 4 channels.
             classes: Optional list of class subdirectories
@@ -368,7 +368,7 @@ class ImageDataAugmentor(Sequence):
                 weights. Default: `None`.
             target_size: tuple of integers `(height, width)`, default: `(256, 256)`.
                 The dimensions to which all images found will be resized.
-            color_mode: one of "gray", "rgb", "rgba". Default: "rgb".
+            color_mode: one of "grayscale", "rgb", "rgba". Default: "rgb".
                 Whether the images will be converted to have 1 or 3 color channels.
             classes: optional list of classes (e.g. `['dogs', 'cats']`).
                 Default: None. If not provided, the list of classes will be

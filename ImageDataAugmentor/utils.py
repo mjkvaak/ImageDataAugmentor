@@ -85,7 +85,7 @@ def load_img(fname, color_mode='rgb', target_size=None, interpolation=cv2.INTER_
         if img.shape[-1]!=4: #Add alpha-channel if not RGBA
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGBA)
             
-    elif color_mode == "gray":
+    elif color_mode == "grayscale":
         img = cv2.imread(fname, 0)
 
     else:
@@ -96,7 +96,7 @@ def load_img(fname, color_mode='rgb', target_size=None, interpolation=cv2.INTER_
         if img.shape[0:2] != width_height_tuple:
             img = cv2.resize(img, dsize=width_height_tuple, interpolation = interpolation)
 
-    if color_mode == "gray":
+    if color_mode == "grayscale":
         return img[..., np.newaxis] #Add dummy axis. This is done here, cause `cv2.resize` removes the dummy axes
 
     else:
