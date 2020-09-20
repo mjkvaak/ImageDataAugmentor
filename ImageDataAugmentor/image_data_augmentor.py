@@ -20,7 +20,7 @@ import scipy
 from scipy import linalg
 
 import cv2
-from keras.utils import Sequence
+from tensorflow.keras.utils import Sequence
 
 from .dataframe_iterator import DataFrameIterator
 from .directory_iterator import DirectoryIterator
