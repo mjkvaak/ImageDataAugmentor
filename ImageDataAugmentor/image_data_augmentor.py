@@ -20,7 +20,7 @@ import scipy
 from scipy import linalg
 
 import cv2
-from keras.utils import Sequence
+from tensorflow.keras.utils import Sequence
 
 from .dataframe_iterator import DataFrameIterator
 from .directory_iterator import DirectoryIterator
@@ -34,7 +34,7 @@ class ImageDataAugmentor(Sequence):
             If None or 0, no rescaling is applied,
             otherwise we multiply the data by the value provided
             (after applying all other transformations).
-        preprocessing_input: function that will be implied on each input.
+        preprocess_input: function that will be implied on each input.
             The function will run after the image is resized and augmented.
             The function should take one argument:
             one image, and should output a Numpy tensor with the same shape.
