@@ -17,8 +17,11 @@ For similar projects, see:
 
 ### Installation 
 * For `tensorflow.keras`:
+
 ```$ pip install git+https://github.com/mjkvaak/ImageDataAugmentor```
+
 * (Deprecated) for `keras` you can still install `ImageDataAugmentor` from the last commit that supported the framework:
+
 ```$ pip install git+https://github.com/mjkvaak/ImageDataAugmentor.git@ce9bf4d7d532bfcb14fda7fb43d7bcdc6d7990ff```
 
 ### How to use
