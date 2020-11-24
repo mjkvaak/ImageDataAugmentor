@@ -158,7 +158,9 @@ class ImageDataAugmentor(Sequence):
              save_to_dir=None,
              save_prefix='',
              save_format='png',
-             subset=None):
+             subset=None,
+             dtype='float32'
+             ):
         """Takes data & label arrays, generates batches of augmented data.
         # Arguments
             x: Input data. Numpy array of rank 4 or a tuple.
@@ -211,7 +213,8 @@ class ImageDataAugmentor(Sequence):
             save_to_dir=save_to_dir,
             save_prefix=save_prefix,
             save_format=save_format,
-            subset=subset
+            subset=subset,
+            dtype=dtype
         )
     
     def flow_from_directory(self,
