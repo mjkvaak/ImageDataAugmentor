@@ -201,30 +201,20 @@ class NumpyArrayIterator(Iterator):
 
         if self.y is None:
             imgs = self._get_batch_of_samples(img_arr, apply_standardization=apply_standardization)
-            lbls = None
-        elif self.sample_weight is None:
-            imgs, lbls = self._get_batch_of_samples(img_arr, apply_standardization=apply_standardization)
-            lbls = None
         else:
-            imgs, lbls, _ = self._get_batch_of_samples(img_arr, apply_standardization=apply_standardization)
-            lbls = None
+            imgs = self._get_batch_of_samples(img_arr, apply_standardization=apply_standardization)[0]
 
         if self.data_format == "channels_first": # swap into the "channels_last" data_format if needed
             imgs = np.array([np.swapaxes(img,0,2) for img in imgs])
-
-        # TODO: handle labels
 
         if not 'figsize' in plt_kwargs:
             plt_kwargs['figsize'] = (2 * cols, 2 * rows)
 
         plt.close('all')
         plt.figure(**plt_kwargs)
-
         for idx, img in enumerate(imgs):
             plt.subplot(rows, cols, idx + 1)
             plt.imshow(img.squeeze())
-            if lbls is not None:
-                plt.title(lbls[idx])
             plt.axis('off')
 
         plt.subplots_adjust(hspace=0.5, wspace=0.5)

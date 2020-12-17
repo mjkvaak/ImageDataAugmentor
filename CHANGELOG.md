@@ -25,3 +25,6 @@ labels, e.g if `ImageDataAugmentor.flow_from_dataframe.class_mode` is set to
   right before the batch is being returned whereas earlier the datatype casting was
   done in the start of data generation. This will prevent errors caused by augmentations
   not being able to handle the casted datatypes.
+
+* Removed the direct support for `imgaug` since `imgaug` transformations can be called
+using `augmentations.imgaug`
