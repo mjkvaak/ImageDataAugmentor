@@ -6,10 +6,9 @@ from __future__ import print_function
 
 import os
 import warnings
-
 import numpy as np
+import pandas as pd
 import cv2
-
 from .iterator import BatchFromFilesMixin, Iterator
 from .utils import validate_filename
 
@@ -31,6 +30,7 @@ class DataFrameIterator(BatchFromFilesMixin, Iterator):
                 the given `y_col` column with class values as strings.
             - if `class_mode` is `"raw"` or `"multi_output"` it should contain
                 the columns specified in `y_col`.
+            - if `class_mode` is "image"
             - if `class_mode` is `"input"` or `None` no extra column is needed.
         directory: string, path to the directory to read images from. If `None`,
             data in `x_col` column should be absolute paths.
@@ -43,12 +43,12 @@ class DataFrameIterator(BatchFromFilesMixin, Iterator):
         weight_col: string, column in `dataframe` that contains the sample
             weights. Default: `None`.
         target_size: tuple of integers, dimensions to resize input images to.
-        color_mode: One of `"rgb"`, `"rgba"`, `"grayscale"`.
+        color_mode: One of `"rgb"`, `"rgba"`, `"grayscale"` (or `"gray"`),
             Color mode to read images.
         classes: Optional list of strings, classes to use (e.g. `["dogs", "cats"]`).
             If None, all classes in `y_col` will be used.
         class_mode: one of "binary", "categorical", "input", "multi_output",
-            "raw", "sparse" or None. Default: "categorical".
+            "raw", "sparse", "image" or None. Default: "categorical".
             Mode for yielding the targets:
             - `"binary"`: 1D numpy array of binary labels,
             - `"categorical"`: 2D numpy array of one-hot encoded labels.
@@ -58,12 +58,13 @@ class DataFrameIterator(BatchFromFilesMixin, Iterator):
             - `"multi_output"`: list with the values of the different columns,
             - `"raw"`: numpy array of values in `y_col` column(s),
             - `"sparse"`: 1D numpy array of integer labels,
+            - `"image_target"`: string, filepaths relative to
+                `directory` (or absolute paths if `directory` is None)
             - `None`, no targets are returned (the generator will only yield
                 batches of image data, which is useful to use in
-                `model.predict_generator()`).
+                `model.predict()`).
         batch_size: Integer, size of a batch.
         shuffle: Boolean, whether to shuffle the data between epochs.
-        seed: Random seed for data shuffling.
         data_format: String, one of `channels_first`, `channels_last`.
         save_to_dir: Optional directory where to save the pictures
             being yielded, in a viewable format. This is useful
@@ -81,37 +82,36 @@ class DataFrameIterator(BatchFromFilesMixin, Iterator):
             Supported methods are `"cv2.INTER_NEAREST"`, `"cv2.INTER_LINEAR"`, `"cv2.INTER_AREA"`, `"cv2.INTER_CUBIC"`
             and `"cv2.INTER_LANCZOS4"`
             By default, `"cv2.INTER_NEAREST"` is used.
-        dtype: Dtype to use for the generated arrays.
+        dtype: Output dtype into which the generated arrays will be casted before returning
         validate_filenames: Boolean, whether to validate image filenames in
         `x_col`. If `True`, invalid images will be ignored. Disabling this option
         can lead to speed-up in the instantiation of this class. Default: `True`.
     """
     allowed_class_modes = {
-        'binary', 'categorical', 'input', 'multi_output', 'raw', 'sparse', None
+        'binary', 'categorical', 'input', 'multi_output', 'raw', 'sparse', 'image_target', 'mask_target', None
     }
 
     def __init__(self,
-                 dataframe,
-                 directory=None,
-                 image_data_generator=None,
-                 x_col="filename",
-                 y_col="class",
-                 weight_col=None,
-                 target_size=(256, 256),
-                 color_mode='rgb',
-                 classes=None,
-                 class_mode='categorical',
-                 batch_size=32,
-                 shuffle=True,
-                 seed=None,
-                 data_format='channels_last',
-                 save_to_dir=None,
-                 save_prefix='',
-                 save_format='png',
-                 subset=None,
-                 interpolation=cv2.INTER_NEAREST,
-                 dtype='float32',
-                 validate_filenames=True):
+                 dataframe: pd.DataFrame,
+                 directory: str = None,
+                 image_data_generator = None,
+                 x_col: str = "filename",
+                 y_col: str = "class",
+                 weight_col: str = None,
+                 target_size: tuple = (256, 256),
+                 color_mode: str = 'rgb',
+                 classes: list = None,
+                 class_mode: str = 'categorical',
+                 batch_size: int = 32,
+                 shuffle: bool = True,
+                 data_format: str = 'channels_last',
+                 save_to_dir: str = None,
+                 save_prefix: str = '',
+                 save_format: str = 'png',
+                 subset: str = None,
+                 interpolation: int = cv2.INTER_NEAREST,
+                 dtype: str = 'float32',
+                 validate_filenames: bool = True):
 
         super(DataFrameIterator, self).set_processing_attrs(image_data_generator,
                                                             target_size,
@@ -121,22 +121,26 @@ class DataFrameIterator(BatchFromFilesMixin, Iterator):
                                                             save_prefix,
                                                             save_format,
                                                             subset,
-                                                            interpolation)
+                                                            interpolation,
+                                                            dtype
+                                                            )
         df = dataframe.copy()
         self.directory = directory or ''
         self.class_mode = class_mode
         self.dtype = dtype
+        self.seed = image_data_generator.seed
+
         # check that inputs match the required class_mode
         self._check_params(df, x_col, y_col, weight_col, classes)
         if validate_filenames:  # check which image files are valid and keep them
             df = self._filter_valid_filepaths(df, x_col)
-        if class_mode not in ["input", "multi_output", "raw", None]:
+        if class_mode not in ["input", "multi_output", "raw", "image_target",'mask_target', None]:
             df, classes = self._filter_classes(df, y_col, classes)
             num_classes = len(classes)
             # build an index of all the unique classes
             self.class_indices = dict(zip(classes, range(len(classes))))
             self.num_classes = num_classes
-        
+
         # retrieve only training or validation set
         if self.split:
             num_files = len(df)
@@ -144,18 +148,21 @@ class DataFrameIterator(BatchFromFilesMixin, Iterator):
             stop = int(self.split[1] * num_files)
             df = df.iloc[start: stop, :]
         # get labels for each observation
-        if class_mode not in ["input", "multi_output", "raw", None]:
+        if class_mode not in ["input", "multi_output", "raw", "image_target", 'mask_target',None]:
             self.classes = self.get_classes(df, y_col)
         self.filenames = df[x_col].tolist()
         self._sample_weight = df[weight_col].values if weight_col else None
 
         if class_mode == "multi_output":
             self._targets = [np.array(df[col].tolist()) for col in y_col]
-        if class_mode == "raw":
+        elif class_mode == "raw":
             self._targets = df[y_col].values
+        elif class_mode in ["image_target", 'mask_target',]:
+            self._targets = df[y_col].tolist()
+
         self.samples = len(self.filenames)
         validated_string = 'validated' if validate_filenames else 'non-validated'
-        if class_mode in ["input", "multi_output", "raw", None]:
+        if class_mode in ["input", "multi_output", "raw", "image_target", 'mask_target',None]:
             print('Found {} {} image filenames.'
                   .format(self.samples, validated_string))
         else:
@@ -167,7 +174,8 @@ class DataFrameIterator(BatchFromFilesMixin, Iterator):
         super(DataFrameIterator, self).__init__(self.samples,
                                                 batch_size,
                                                 shuffle,
-                                                seed)
+                                                self.seed
+                                                )
 
     def _check_params(self, df, x_col, y_col, weight_col, classes):
         # check class mode is one of the currently supported
@@ -178,7 +186,7 @@ class DataFrameIterator(BatchFromFilesMixin, Iterator):
         if (self.class_mode == 'multi_output') and not isinstance(y_col, list):
             raise TypeError(
                 'If class_mode="{}", y_col must be a list. Received {}.'
-                .format(self.class_mode, type(y_col).__name__)
+                    .format(self.class_mode, type(y_col).__name__)
             )
         # check that filenames/filepaths column values are all strings
         if not all(df[x_col].apply(lambda x: isinstance(x, str))):
@@ -209,7 +217,7 @@ class DataFrameIterator(BatchFromFilesMixin, Iterator):
                                 'values must be type string, list or tuple.'
                                 .format(self.class_mode, y_col))
         # raise warning if classes are given but will be unused
-        if classes and self.class_mode in {"input", "multi_output", "raw", None}:
+        if classes and self.class_mode in {"input", "multi_output", "raw", "image", "mask", None}:
             warnings.warn('`classes` will be ignored given the class_mode="{}"'
                           .format(self.class_mode))
         # check that if weight column that the values are numerical
@@ -239,7 +247,7 @@ class DataFrameIterator(BatchFromFilesMixin, Iterator):
             else:
                 raise TypeError(
                     "Expect string, list or tuple but found {} in {} column "
-                    .format(type(labels), y_col)
+                        .format(type(labels), y_col)
                 )
 
         if classes:
@@ -273,7 +281,7 @@ class DataFrameIterator(BatchFromFilesMixin, Iterator):
             warnings.warn(
                 'Found {} invalid image filename(s) in x_col="{}". '
                 'These filename(s) will be ignored.'
-                .format(n_invalid, x_col)
+                    .format(n_invalid, x_col)
             )
         return df[mask]
 
@@ -283,7 +291,7 @@ class DataFrameIterator(BatchFromFilesMixin, Iterator):
 
     @property
     def labels(self):
-        if self.class_mode in {"multi_output", "raw"}:
+        if self.class_mode in {"multi_output", "raw", "image_target", 'mask_target',}:
             return self._targets
         else:
             return self.classes

@@ -8,16 +8,12 @@ import os
 import threading
 import numpy as np
 from keras_preprocessing import get_keras_submodule
-import matplotlib.pyplot as plt
-
 try:
     IteratorType = get_keras_submodule('utils').Sequence
 except ImportError:
     IteratorType = object
-
-from .utils import (array_to_img,
-                    img_to_array,
-                    load_img)
+import matplotlib.pyplot as plt
+from .utils import (array_to_img,load_img)
 
 
 class Iterator(IteratorType):
@@ -35,12 +31,12 @@ class Iterator(IteratorType):
     white_list_formats = ('png', 'jpg', 'jpeg', 'bmp', 'ppm', 'tif', 'tiff')
 
     def __init__(self, n, batch_size, shuffle, seed):
-        self.n = n
-        self.batch_size = batch_size
-        self.seed = seed
-        self.shuffle = shuffle
-        self.batch_index = 0
-        self.total_batches_seen = 0
+        self.n :int= n
+        self.batch_size:int = batch_size
+        self.seed:int = seed
+        self.shuffle:bool = shuffle
+        self.batch_index:int = 0
+        self.total_batches_seen:int = 0
         self.lock = threading.Lock()
         self.index_array = None
         self.index_generator = self._flow_index()
@@ -48,6 +44,8 @@ class Iterator(IteratorType):
     def _set_index_array(self):
         self.index_array = np.arange(self.n)
         if self.shuffle:
+            if self.seed is not None:
+                np.random.seed(self.seed + self.total_batches_seen)
             self.index_array = np.random.permutation(self.n)
 
     def __getitem__(self, idx):
@@ -143,14 +141,16 @@ class BatchFromFilesMixin():
                              save_prefix,
                              save_format,
                              subset,
-                             interpolation):
+                             interpolation,
+                             dtype
+                             ):
         """Sets attributes to use later for processing files into a batch.
 
         # Arguments
             image_data_generator: Instance of `ImageDataAugmentor`
                 to use for random transformations and normalization.
             target_size: tuple of integers, dimensions to resize input images to.
-            color_mode: One of `"rgb"`, `"rgba"`, `"grayscale"`.
+            color_mode: One of `"rgb"`, `"rgba"`, `"grayscale"` (or `"gray"`).
                 Color mode to read images.
             data_format: String, one of `channels_first`, `channels_last`.
             save_to_dir: Optional directory where to save the pictures
@@ -169,6 +169,7 @@ class BatchFromFilesMixin():
                 Supported methods are `"cv2.INTER_NEAREST"`, `"cv2.INTER_LINEAR"`, `"cv2.INTER_AREA"`, `"cv2.INTER_CUBIC"`
                 and `"cv2.INTER_LANCZOS4"`
                 By default, `"cv2.INTER_NEAREST"` is used.
+            dtype: Output dtype into which the generated arrays will be casted before returning.
         """
         self.image_data_generator = image_data_generator
         self.target_size = tuple(target_size)
@@ -210,6 +211,7 @@ class BatchFromFilesMixin():
             split = None
         self.split = split
         self.subset = subset
+        self.dtype = dtype
 
     def _get_batch_of_samples(self, index_array, apply_standardization=True):
         """Gets a batch of transformed samples.
@@ -230,25 +232,6 @@ class BatchFromFilesMixin():
                                      target_size=self.target_size, 
                                      interpolation=self.interpolation) for x in index_array])    
 
-        # apply the augmentations and custom transformations to the image data
-        batch_x = np.array([self.image_data_generator.transform_image(x, standardize=apply_standardization) for x in batch_x])
-
-        # transform to `channels_first` format if needed
-        if self.data_format == "channels_first":
-            batch_x = np.array([np.swapaxes(x,0,2) for x in batch_x])
-
-        # optionally save augmented images to disk for debugging purposes
-        if self.save_to_dir:
-            for i, j in enumerate(index_array):
-                img = array_to_img(batch_x[i], self.data_format, scale=True)
-                fname = '{prefix}_{index}_{hash}.{format}'.format(
-                    prefix=self.save_prefix,
-                    index=j,
-                    hash=np.random.randint(1e7),
-                    format=self.save_format)
-                img.save(os.path.join(self.save_to_dir, fname))
-        # build batch of labels
-            
         if self.class_mode == 'input':
             batch_y = batch_x.copy()
         elif self.class_mode in {'binary', 'sparse'}:
@@ -264,7 +247,55 @@ class BatchFromFilesMixin():
             batch_y = [output[index_array] for output in self.labels]
         elif self.class_mode == 'raw':
             batch_y = self.labels[index_array]
+        elif self.class_mode == 'image_target':
+            batch_y = np.array([load_img(self.labels[y],
+                                         color_mode=self.color_mode,
+                                         target_size=self.target_size,
+                                         interpolation=self.interpolation) for y in index_array])
+        elif self.class_mode == 'mask_target':
+            batch_y = np.array([load_img(self.labels[y],
+                                         color_mode="gray",
+                                         target_size=self.target_size,
+                                         interpolation=self.interpolation) for y in index_array])
         else:
+            batch_y = None
+
+        # apply the augmentations and standardization to the data
+        if self.class_mode in {'input', 'raw', 'image_target', 'mask_target'}:
+            data = [
+                self.image_data_generator.transform_data(x, y, standardize=apply_standardization)
+                for x,y in zip(batch_x, batch_y)
+            ]
+            batch_x = np.array([d[0] for d in data])
+            batch_y = np.array([d[1] for d in data])
+        else:
+            batch_x = np.array([
+                self.image_data_generator.transform_data(x, None, standardize=apply_standardization)[0]
+                for x in batch_x
+            ])
+
+        # transform to `channels_first` format if needed
+        if self.data_format == "channels_first":
+            batch_x = np.array([np.swapaxes(x,0,2) for x in batch_x])
+            if self.class_mode in {'image_target', 'mask_target',}:
+                batch_y = np.array([np.swapaxes(y, 0, 2) for x in batch_y])
+
+        # optionally save augmented images to disk e.g. for debugging purposes
+        if self.save_to_dir:
+            for i, j in enumerate(index_array):
+                img = array_to_img(batch_x[i], self.data_format, scale=True)
+                fname = '{prefix}_{index}_{hash}.{format}'.format(
+                    prefix=self.save_prefix,
+                    index=j,
+                    hash=np.random.randint(1e7),
+                    format=self.save_format)
+                img.save(os.path.join(self.save_to_dir, fname))
+
+        # return batch
+        if apply_standardization:
+            batch_x = np.asarray(batch_x, dtype=self.dtype)
+            batch_y = np.asarray(batch_y, dtype=self.dtype)
+        if self.class_mode == 'None':
             return batch_x
         if self.sample_weight is None:
             return batch_x, batch_y
@@ -275,34 +306,37 @@ class BatchFromFilesMixin():
         return self._get_batch_of_samples(index_array)
 
 
-    def show_batch(self, rows:int=5, apply_standardization:bool=False, **plt_kwargs):
-        img_arr = np.random.choice(range(len(self.classes)), rows**2)
+    def show_data(self, rows:int=5, cols:int=5, apply_standardization:bool=False, **plt_kwargs):
+
+        index_array = np.random.choice(range(self.n), rows*cols)
         if self.class_mode is None:
-            imgs = self._get_batch_of_samples(img_arr, apply_standardization=apply_standardization)
+            imgs = self._get_batch_of_samples(index_array, apply_standardization=apply_standardization)
         else:
-            imgs, _ = self._get_batch_of_samples(img_arr, apply_standardization=apply_standardization)
-            lbls = np.array(self.labels)[img_arr]
-        
-            try:
-                inv_class_indices = {v: k for k, v in self.class_indices.items()}
-                lbls = [inv_class_indices.get(k) for k in lbls]
-            except:
-                pass
+            imgs = self._get_batch_of_samples(index_array, apply_standardization=apply_standardization)[0]
+
+        if self.class_mode in {'input', 'image_target', 'mask_target', 'raw'}:
+            labels = None
+        elif self.class_mode == 'multi_output':
+            labels = [output[index_array] for output in self.labels]
+            labels = [(x,y) for x,y in zip(*labels)]
+        else:
+            labels = np.array(self.classes)[index_array]
+            inv_class_indices = {v: k for k, v in self.class_indices.items()}
+            labels = [inv_class_indices[label] for label in labels]
 
         if self.data_format == "channels_first":
-            imgs = np.array([np.swapaxes(img,0,2) for img in imgs])
+            imgs = np.array([np.swapaxes(img, 0, 2) for img in imgs])
 
         if not 'figsize' in plt_kwargs:
-            plt_kwargs['figsize'] = (12,12)
+            plt_kwargs['figsize'] = (2*cols, 2*rows)
 
         plt.close('all')
         plt.figure(**plt_kwargs)
-
         for idx, img in enumerate(imgs):
-            plt.subplot(rows, rows, idx+1)
+            plt.subplot(rows, cols, idx+1)
             plt.imshow(img.squeeze())
-            if lbls is not None:
-                plt.title(lbls[idx])
+            if labels is not None:
+                plt.title(labels[idx])
             plt.axis('off')
         
         plt.subplots_adjust(hspace=0.5, wspace=0.5)

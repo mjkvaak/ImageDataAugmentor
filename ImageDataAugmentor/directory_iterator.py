@@ -7,10 +7,8 @@ from __future__ import print_function
 import os
 import multiprocessing.pool
 from six.moves import range
-
 import numpy as np
 import cv2
-
 from .iterator import BatchFromFilesMixin, Iterator
 from .utils import _list_valid_filenames_in_directory
 
@@ -27,7 +25,7 @@ class DirectoryIterator(BatchFromFilesMixin, Iterator):
         image_data_generator: Instance of `ImageDataAugmentor`
             to use for random transformations and normalization.
         target_size: tuple of integers, dimensions to resize input images to.
-        color_mode: One of `"rgb"`, `"rgba"`, `"grayscale"`.
+        color_mode: One of `"rgb"`, `"rgba"`, `"grayscale"` (or `"gray"`),
             Color mode to read images.
         classes: Optional list of strings, names of subdirectories
             containing images from each class (e.g. `["dogs", "cats"]`).
@@ -61,28 +59,27 @@ class DirectoryIterator(BatchFromFilesMixin, Iterator):
             Supported methods are `"cv2.INTER_NEAREST"`, `"cv2.INTER_LINEAR"`, `"cv2.INTER_AREA"`, `"cv2.INTER_CUBIC"`
             and `"cv2.INTER_LANCZOS4"`
             By default, `"cv2.INTER_NEAREST"` is used.
-        dtype: Dtype to use for generated arrays.
+        dtype: Output dtype into which the generated arrays will be casted before returning
     """
     allowed_class_modes = {'categorical', 'binary', 'sparse', 'input', None}
 
     def __init__(self,
-                 directory,
+                 directory: str,
                  image_data_generator,
-                 target_size=(256, 256),
-                 color_mode='rgb',
-                 classes=None,
-                 class_mode='categorical',
-                 batch_size=32,
-                 shuffle=True,
-                 seed=None,
-                 data_format='channels_last',
-                 save_to_dir=None,
-                 save_prefix='',
-                 save_format='png',
-                 follow_links=False,
-                 subset=None,
-                 interpolation=cv2.INTER_NEAREST,
-                 dtype='float32'):
+                 target_size: tuple = (256, 256),
+                 color_mode: str = 'rgb',
+                 classes: list = None,
+                 class_mode: str = 'categorical',
+                 batch_size: int = 32,
+                 shuffle: bool = True,
+                 data_format: str = 'channels_last',
+                 save_to_dir: str = None,
+                 save_prefix: str = '',
+                 save_format: str = 'png',
+                 follow_links: bool = False,
+                 subset: str = None,
+                 interpolation: int = cv2.INTER_NEAREST,
+                 dtype: str = 'float32'):
         super(DirectoryIterator, self).set_processing_attrs(image_data_generator,
                                                             target_size,
                                                             color_mode,
@@ -91,7 +88,9 @@ class DirectoryIterator(BatchFromFilesMixin, Iterator):
                                                             save_prefix,
                                                             save_format,
                                                             subset,
-                                                            interpolation)
+                                                            interpolation,
+                                                            dtype
+                                                            )
         self.directory = directory
         self.classes = classes
         if class_mode not in self.allowed_class_modes:
@@ -99,6 +98,8 @@ class DirectoryIterator(BatchFromFilesMixin, Iterator):
                              .format(class_mode, self.allowed_class_modes))
         self.class_mode = class_mode
         self.dtype = dtype
+        self.seed = image_data_generator.seed
+
         # First, count the number of samples and classes.
         self.samples = 0
 
@@ -143,7 +144,7 @@ class DirectoryIterator(BatchFromFilesMixin, Iterator):
         super(DirectoryIterator, self).__init__(self.samples,
                                                 batch_size,
                                                 shuffle,
-                                                seed)
+                                                self.seed)
 
     @property
     def filepaths(self):
