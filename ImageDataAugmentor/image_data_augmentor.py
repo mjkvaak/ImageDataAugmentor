@@ -1,8 +1,5 @@
-## Code heavily adapted from:
-## *https://github.com/keras-team/keras-preprocessing/blob/master/keras_preprocessing/
-
-## For similar projects, see also:
-## *https://github.com/davidfreire/Augmentation_project
+# Code heavily adapted from:
+# https://github.com/keras-team/keras-preprocessing/blob/master/keras_preprocessing/
 
 """Utilities for real-time data augmentation on image data.
 """
@@ -10,22 +7,21 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import warnings
-from six.moves import range
-
-import numpy as np
 import random
-
+import warnings
+import numpy as np
+import pandas as pd
 import scipy
 from scipy import linalg
-
 import cv2
+import albumentations
+from six.moves import range
 from tensorflow.keras.utils import Sequence
-
 from .dataframe_iterator import DataFrameIterator
 from .directory_iterator import DirectoryIterator
 from .numpy_array_iterator import NumpyArrayIterator
-    
+
+
 class ImageDataAugmentor(Sequence):
     """Generate batches of tensor image data with real-time data augmentation.
     The data will be looped over (in batches).
@@ -38,15 +34,8 @@ class ImageDataAugmentor(Sequence):
             The function will run after the image is resized and augmented.
             The function should take one argument:
             one image, and should output a Numpy tensor with the same shape.
-        augment: augmentations passed as albumentations or imgaug transformation 
-            or sequence of transformations.
-        augment_seed: makes augmentations from albumentations deterministic.
-            Notice! imgaug uses input seeds so to make the transformations deterministic,
-            use ia.seed(X) or call transformations with .to_deterministic().
-        augment_mode: should be either 'image' or 'mask'. If latter, only the 
-            albumentation transformation relevant for segmentation mask augmentation will be use.
-            Notice! In imgaug the 'mask'-mode cannot be selected, so you have to sure that your augmentations
-            are fit for mask generation (e.g. no noise generation/color manipulation).        
+        augment: augmentations passed as albumentations (sequence of) transformations.
+        seed: Optional random seed for shuffling and transformations.
         data_format: Image data format,
             either "channels_first" or "channels_last".
             "channels_last" mode means that the images should have shape
@@ -58,44 +47,46 @@ class ImageDataAugmentor(Sequence):
             If you never set it, then it will be "channels_last".
         validation_split: Float. Fraction of images reserved for validation
             (strictly between 0 and 1).
-        dtype: Dtype to use for the generated arrays.
     """
 
     def __init__(self,
-                 featurewise_center=False,
-                 samplewise_center=False,
-                 featurewise_std_normalization=False,
-                 samplewise_std_normalization=False,
-                 zca_whitening=False,
+                 featurewise_center: bool = False,
+                 samplewise_center: bool = False,
+                 featurewise_std_normalization: bool = False,
+                 samplewise_std_normalization: bool = False,
+                 zca_whitening: bool = False,
                  augment=None,
-                 augment_mode='image',
-                 augment_seed=None,
-                 rescale=None,
+                 label_augment_mode:str = None,
+                 seed: int = None,
+                 rescale: float = None,
                  preprocess_input=None,
-                 data_format='channels_last',
-                 validation_split=0.0,
-                 dtype='float32'):
-        
+                 preprocess_output=None,
+                 data_format: str = 'channels_last',
+                 validation_split: float = 0.0,
+                 **kwargs
+                 ):
+
         self.featurewise_center = featurewise_center
         self.samplewise_center = samplewise_center
         self.featurewise_std_normalization = featurewise_std_normalization
         self.samplewise_std_normalization = samplewise_std_normalization
-        self.zca_whitening = zca_whitening         
+        self.zca_whitening = zca_whitening
         self.augment = augment
-        self.augment_seed = augment_seed
-        self.augment_mode = augment_mode
-        if self.augment_mode == 'mask' and self.augment_seed == None:
-            warnings.warn('This ImageDataAugmentor uses `augment_mode=mask` '
-                          'but no `augment_seed` was given. FYI: setting `augment_seed=0`.'
-                         )
-            self.augment_seed = 0
-            
+        self.label_augment_mode = label_augment_mode
+        if self.label_augment_mode=="image":
+            warnings.warn("Trying to set `label_augment_mode` to `'image'`, but this key has already been preserved "
+                          "for the input image augmentations. Setting `label_augment_mode='same_as_input'` instead")
+            self.label_augment_mode = "same_as_input"
+            if self.augment is not None:
+                self.augment = albumentations.Compose(self.augment.transforms.transforms,
+                                                      additional_targets={self.label_augment_mode:'image'}
+                                                      )
+        self.seed = seed
         self.rescale = rescale
         self.preprocess_input = preprocess_input
-        self.dtype = dtype
+        self.preprocess_output = preprocess_output
         self.total_transformations_done = 0
-       
-        
+
         if data_format not in {'channels_last', 'channels_first'}:
             raise ValueError(
                 '`data_format` should be `"channels_last"` '
@@ -113,53 +104,53 @@ class ImageDataAugmentor(Sequence):
             self.col_axis = 2
         if validation_split and not 0 < validation_split < 1:
             raise ValueError(
-                '`validation_split` must be strictly between 0 and 1. '
+                '`validation_split` must be strictly between 0 and 1 or None. '
                 ' Received: %s' % validation_split)
         self._validation_split = validation_split
-        
+
         self.mean = None
         self.std = None
         self.principal_components = None
-        
+
         if zca_whitening:
-            if not featurewise_center:
+            if not self.featurewise_center:
                 self.featurewise_center = True
                 warnings.warn('This ImageDataAugmentor specifies '
                               '`zca_whitening`, which overrides '
                               'setting of `featurewise_center`.')
-            if featurewise_std_normalization:
+            if self.featurewise_std_normalization:
                 self.featurewise_std_normalization = False
                 warnings.warn('This ImageDataAugmentor specifies '
                               '`zca_whitening` '
                               'which overrides setting of'
                               '`featurewise_std_normalization`.')
-        if featurewise_std_normalization:
+        if self.featurewise_std_normalization:
             if not featurewise_center:
                 self.featurewise_center = True
                 warnings.warn('This ImageDataAugmentor specifies '
                               '`featurewise_std_normalization`, '
                               'which overrides setting of '
                               '`featurewise_center`.')
-        if samplewise_std_normalization:
+        if self.samplewise_std_normalization:
             if not samplewise_center:
                 self.samplewise_center = True
                 warnings.warn('This ImageDataAugmentor specifies '
                               '`samplewise_std_normalization`, '
                               'which overrides setting of '
                               '`samplewise_center`.')
-                
+
     def flow(self,
-             x,
-             y=None,
-             batch_size=32,
-             shuffle=True,
+             x: np.array,
+             y: np.array = None,
+             batch_size: int = 32,
+             shuffle: bool = True,
              sample_weight=None,
-             seed=None,
-             save_to_dir=None,
-             save_prefix='',
-             save_format='png',
-             subset=None,
-             dtype='float32'
+             save_to_dir: str = None,
+             save_prefix: str = '',
+             save_format: str = 'png',
+             subset: str = None,
+             dtype: str = 'float32',
+             **kwargs
              ):
         """Takes data & label arrays, generates batches of augmented data.
         # Arguments
@@ -179,7 +170,6 @@ class ImageDataAugmentor(Sequence):
             batch_size: Int (default: 32).
             shuffle: Boolean (default: True).
             sample_weight: Sample weights.
-            seed: Int (default: None).
             save_to_dir: None or str (default: None).
                 This allows you to optionally specify a directory
                 to which to save the augmented pictures being generated
@@ -201,6 +191,11 @@ class ImageDataAugmentor(Sequence):
                 the yielded tuples are of the form `(x, y, sample_weight)`.
                 If `y` is None, only the numpy array `x` is returned.
         """
+        if 'seed' in kwargs:
+
+            warnings.warn('Passing `seed` in `.flow` has been been removed: pass  `seed` '
+                          'as parameter in `ImageDataAugmentor(..., seed=...)` instead')
+
         return NumpyArrayIterator(
             x,
             y,
@@ -208,30 +203,31 @@ class ImageDataAugmentor(Sequence):
             batch_size=batch_size,
             shuffle=shuffle,
             sample_weight=sample_weight,
-            seed=seed,
             data_format=self.data_format,
             save_to_dir=save_to_dir,
             save_prefix=save_prefix,
             save_format=save_format,
             subset=subset,
-            dtype=dtype
+            dtype=dtype,
+            **kwargs
         )
-    
+
     def flow_from_directory(self,
-                            directory,
-                            target_size=(256, 256),
-                            color_mode='rgb',
-                            classes=None,
-                            class_mode='categorical',
-                            batch_size=32,
-                            shuffle=True,
-                            seed=None,
-                            save_to_dir=None,
-                            save_prefix='',
-                            save_format='png',
-                            follow_links=False,
-                            subset=None,
-                            interpolation=cv2.INTER_NEAREST):
+                            directory: str,
+                            target_size: tuple = (256, 256),
+                            color_mode: str = 'rgb',
+                            classes: list = None,
+                            class_mode: str = 'categorical',
+                            batch_size: int = 32,
+                            shuffle: bool = True,
+                            save_to_dir: str = None,
+                            save_prefix: str = '',
+                            save_format: str = 'png',
+                            follow_links: bool = False,
+                            subset: str = None,
+                            interpolation: str = cv2.INTER_NEAREST,
+                            **kwargs
+                            ):
         """Takes the path to a directory & generates batches of augmented data.
         # Arguments
             directory: string, path to the target directory.
@@ -245,7 +241,7 @@ class ImageDataAugmentor(Sequence):
             target_size: Tuple of integers `(height, width)`,
                 default: `(256, 256)`.
                 The dimensions to which all images found will be resized.
-            color_mode: One of "grayscale", "rgb", "rgba". Default: "rgb".
+            color_mode: One of "grayscale" (or `"gray"`), "rgb", "rgba". Default: "rgb".
                 Whether the images will be converted to
                 have 1, 3, or 4 channels.
             classes: Optional list of class subdirectories
@@ -275,7 +271,6 @@ class ImageDataAugmentor(Sequence):
             batch_size: Size of the batches of data (default: 32).
             shuffle: Whether to shuffle the data (default: True)
                 If set to False, sorts the data in alphanumeric order.
-            seed: Optional random seed for shuffling and transformations.
             save_to_dir: None or str (default: None).
                 This allows you to optionally specify
                 a directory to which to save
@@ -304,6 +299,10 @@ class ImageDataAugmentor(Sequence):
                 of images with shape `(batch_size, *target_size, channels)`
                 and `y` is a numpy array of corresponding labels.
         """
+        if 'seed' in kwargs:
+            warnings.warn('Passing `seed` in `.flow_from_directory` has been been removed: pass  `seed` '
+                          'as parameter in `ImageDataAugmentor(..., seed=...)` instead')
+
         return DirectoryIterator(
             directory,
             self,
@@ -314,7 +313,6 @@ class ImageDataAugmentor(Sequence):
             data_format=self.data_format,
             batch_size=batch_size,
             shuffle=shuffle,
-            seed=seed,
             save_to_dir=save_to_dir,
             save_prefix=save_prefix,
             save_format=save_format,
@@ -322,27 +320,25 @@ class ImageDataAugmentor(Sequence):
             subset=subset,
             interpolation=interpolation
         )
-    
-          
+
     def flow_from_dataframe(self,
-                            dataframe,
-                            directory=None,
-                            x_col="filename",
-                            y_col="class",
-                            weight_col=None,
-                            target_size=(256, 256),
-                            color_mode='rgb',
-                            classes=None,
-                            class_mode='categorical',
-                            batch_size=32,
-                            shuffle=True,
-                            seed=None,
-                            save_to_dir=None,
-                            save_prefix='',
-                            save_format='png',
-                            subset=None,
+                            dataframe: pd.DataFrame,
+                            directory: str = None,
+                            x_col: str = "filename",
+                            y_col: str = "class",
+                            weight_col: str = None,
+                            target_size: tuple = (256, 256),
+                            color_mode: str = 'rgb',
+                            classes: list = None,
+                            class_mode: str = 'categorical',
+                            batch_size: int = 32,
+                            shuffle: bool = True,
+                            save_to_dir: str = None,
+                            save_prefix: str = '',
+                            save_format: str = 'png',
+                            subset: str = None,
                             interpolation=cv2.INTER_NEAREST,
-                            validate_filenames=True,
+                            validate_filenames: bool = True,
                             **kwargs):
         """Takes the dataframe and the path to a directory
          and generates batches of augmented/normalized data.
@@ -424,22 +420,9 @@ class ImageDataAugmentor(Sequence):
             of images with shape `(batch_size, *target_size, channels)`
             and `y` is a numpy array of corresponding labels.
         """
-        if 'has_ext' in kwargs:
-            warnings.warn('has_ext is deprecated, filenames in the dataframe have '
-                          'to match the exact filenames in disk.',
-                          DeprecationWarning)
-        if 'sort' in kwargs:
-            warnings.warn('sort is deprecated, batches will be created in the'
-                          'same order than the filenames provided if shuffle'
-                          'is set to False.', DeprecationWarning)
-        if class_mode == 'other':
-            warnings.warn('`class_mode` "other" is deprecated, please use '
-                          '`class_mode` "raw".', DeprecationWarning)
-            class_mode = 'raw'
-        if 'drop_duplicates' in kwargs:
-            warnings.warn('drop_duplicates is deprecated, you can drop duplicates '
-                          'by using the pandas.DataFrame.drop_duplicates method.',
-                          DeprecationWarning)
+        if 'seed' in kwargs:
+            warnings.warn('Passing `seed` in `.flow_from_datagrame` has been been removed: pass  `seed` '
+                          'as parameter in `ImageDataAugmentor(..., seed=...)` instead')
 
         return DataFrameIterator(
             dataframe,
@@ -455,7 +438,6 @@ class ImageDataAugmentor(Sequence):
             data_format=self.data_format,
             batch_size=batch_size,
             shuffle=shuffle,
-            seed=seed,
             save_to_dir=save_to_dir,
             save_prefix=save_prefix,
             save_format=save_format,
@@ -464,52 +446,32 @@ class ImageDataAugmentor(Sequence):
             validate_filenames=validate_filenames
         )
 
-    def transform_image(self, image, standardize=True):
+    def transform_data(self,
+                       inputs:np.array,
+                       targets:np.array=None,
+                       standardize:bool=True):
         """
         Transforms an image by first augmenting and then standardizing
         """
-
-        if self.augment_mode == 'mask':
-            if self.augment is not None:
-                if 'albumentations' in str(type(self.augment)):
-                    if self.augment_seed:
-                        random.seed(self.augment_seed + self.total_transformations_done)
-                    data = self.augment(image=np.zeros_like(image), mask=image)
-                    image = data['mask']
-
-                elif 'imgaug' in str(type(self.augment)):
-                    warnings.warn('(Our) `imgaug` support for mask generation is poor: consider using `albumentations` instead.'
-                                  'The masks will be generated using all the augmentations you provided:'
-                                  'make sure they are suitable for mask generation.')
-
-                    if self.augment_seed is not None:
-                        warnings.warn('Make sure to call the `imgaug` augmentations with `.to_deterministic()` to ensure'
-                                      'that images and masks are augmented correctly together.')
-                    image = self.augment(image=image)
-
-                if standardize:
-                    image = self.standardize(image)
-                self.total_transformations_done += 1
-
-        else:
-            if self.augment is not None:
-                if 'albumentations' in str(type(self.augment)):
-                    if self.augment_seed is not None:
-                        random.seed(self.augment_seed + self.total_transformations_done)
-
-                    image = self.augment(image=image)['image']
-
-                elif 'imgaug' in str(type(self.augment)):
-                    image = self.augment(image=image)
-
-            if standardize:
-                image = self.standardize(image)
+        transform_targets = (self.label_augment_mode is not None) and (targets is not None)
+        # augmentations
+        if self.augment is not None:
+            if self.seed:
+                random.seed(self.seed + self.total_transformations_done)
+            data = {'image': inputs}
+            if transform_targets:
+                data[self.label_augment_mode] = targets
+            data = self.augment(**data)
+            inputs = data['image']
+            if transform_targets:
+                targets = data[self.label_augment_mode]
             self.total_transformations_done += 1
+        # standardization
+        if standardize:
+            inputs, targets = self.standardize(inputs, targets)
+        return inputs, targets
 
-        return image
-
-
-    def standardize(self, x):
+    def standardize(self, x, y):
         """Applies the normalization configuration in-place to a batch of inputs.
         `x` is changed in-place since the function is mainly used internally
         to standarize images and feed them to your network. If a copy of `x`
@@ -524,10 +486,12 @@ class ImageDataAugmentor(Sequence):
         """
         if self.preprocess_input:
             x = self.preprocess_input(x)
+        if self.preprocess_output:
+            y = self.preprocess_output(y)
         if self.rescale:
             x = np.multiply(x, self.rescale)
         if self.samplewise_center:
-            x = x-np.mean(x, keepdims=True)
+            x = x - np.mean(x, keepdims=True)
         if self.samplewise_std_normalization:
             x = np.divide(x, (np.std(x, keepdims=True) + 1e-6))
 
@@ -558,9 +522,8 @@ class ImageDataAugmentor(Sequence):
                               '`zca_whitening`, but it hasn\'t '
                               'been fit on any training data. Fit it '
                               'first by calling `.fit(numpy_data)`.')
-        return x
+        return x, y
 
-         
     def fit(self, x,
             augment=False,
             rounds=1,
@@ -593,9 +556,9 @@ class ImageDataAugmentor(Sequence):
                 'following the data format convention "' +
                 self.data_format + '" (channels on axis ' +
                 str(self.channel_axis) + '), i.e. expected '
-                'either 1, 3 or 4 channels on axis ' +
+                                         'either 1, 3 or 4 channels on axis ' +
                 str(self.channel_axis) + '. '
-                'However, it was passed an array with shape ' +
+                                         'However, it was passed an array with shape ' +
                 str(x.shape) + ' (' + str(x.shape[self.channel_axis]) +
                 ' channels).')
 
@@ -618,7 +581,7 @@ class ImageDataAugmentor(Sequence):
             broadcast_shape = [1, 1, 1]
             broadcast_shape[self.channel_axis - 1] = x.shape[self.channel_axis]
             self.mean = np.reshape(self.mean, broadcast_shape)
-            x = x- self.mean
+            x = x - self.mean
 
         if self.featurewise_std_normalization:
             self.std = np.std(x, axis=(0, self.row_axis, self.col_axis))
