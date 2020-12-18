@@ -65,6 +65,8 @@ class ImageDataAugmentor(Sequence):
                  validation_split: float = 0.0,
                  **kwargs
                  ):
+        if kwargs:
+            raise TypeError(f"__init__ got  the following unexpected keyword arguments: {', '.join(kwargs.keys())}")
 
         self.featurewise_center = featurewise_center
         self.samplewise_center = samplewise_center
@@ -191,11 +193,12 @@ class ImageDataAugmentor(Sequence):
                 the yielded tuples are of the form `(x, y, sample_weight)`.
                 If `y` is None, only the numpy array `x` is returned.
         """
-        if 'seed' in kwargs:
-
-            warnings.warn('Passing `seed` in `.flow` has been been removed: pass  `seed` '
-                          'as parameter in `ImageDataAugmentor(..., seed=...)` instead')
-
+        if kwargs:
+            if 'seed' in kwargs:
+                warnings.warn('Passing `seed` in `.flow` has been been removed: pass  `seed` '
+                              'as parameter in `ImageDataAugmentor(..., seed=...)` instead')
+            else:
+                raise TypeError(f"__init__ got  the following unexpected keyword arguments: {', '.join(kwargs.keys())}")
         return NumpyArrayIterator(
             x,
             y,
@@ -299,10 +302,12 @@ class ImageDataAugmentor(Sequence):
                 of images with shape `(batch_size, *target_size, channels)`
                 and `y` is a numpy array of corresponding labels.
         """
-        if 'seed' in kwargs:
-            warnings.warn('Passing `seed` in `.flow_from_directory` has been been removed: pass  `seed` '
-                          'as parameter in `ImageDataAugmentor(..., seed=...)` instead')
-
+        if kwargs:
+            if 'seed' in kwargs:
+                warnings.warn('Passing `seed` in `.flow_from_directory` has been been removed: pass  `seed` '
+                              'as parameter in `ImageDataAugmentor(..., seed=...)` instead')
+            else:
+                raise TypeError(f"__init__ got  the following unexpected keyword arguments: {', '.join(kwargs.keys())}")
         return DirectoryIterator(
             directory,
             self,
@@ -420,9 +425,12 @@ class ImageDataAugmentor(Sequence):
             of images with shape `(batch_size, *target_size, channels)`
             and `y` is a numpy array of corresponding labels.
         """
-        if 'seed' in kwargs:
-            warnings.warn('Passing `seed` in `.flow_from_datagrame` has been been removed: pass  `seed` '
-                          'as parameter in `ImageDataAugmentor(..., seed=...)` instead')
+        if kwargs:
+            if 'seed' in kwargs:
+                warnings.warn('Passing `seed` in `.flow_from_datagrame` has been been removed: pass  `seed` '
+                              'as parameter in `ImageDataAugmentor(..., seed=...)` instead')
+            else:
+                raise TypeError(f"__init__ got  the following unexpected keyword arguments: {', '.join(kwargs.keys())}")
 
         return DataFrameIterator(
             dataframe,

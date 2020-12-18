@@ -277,7 +277,7 @@ class BatchFromFilesMixin():
         # transform to `channels_first` format if needed
         if self.data_format == "channels_first":
             batch_x = np.array([np.swapaxes(x,0,2) for x in batch_x])
-            if self.class_mode in {'image_target', 'mask_target',}:
+            if self.class_mode in {'input', 'image_target', 'mask_target',}:
                 batch_y = np.array([np.swapaxes(y, 0, 2) for x in batch_y])
 
         # optionally save augmented images to disk e.g. for debugging purposes
@@ -294,7 +294,8 @@ class BatchFromFilesMixin():
         # return batch
         if apply_standardization:
             batch_x = np.asarray(batch_x, dtype=self.dtype)
-            batch_y = np.asarray(batch_y, dtype=self.dtype)
+            if self.class_mode in {'input', 'image_target', 'mask_target'}:
+                batch_y = np.asarray(batch_y, dtype=self.dtype)
         if self.class_mode == 'None':
             return batch_x
         if self.sample_weight is None:
