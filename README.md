@@ -163,26 +163,26 @@ mask_data_gen = ImageDataAugmentor(
 )
 print("training:")
 tr_img_gen = img_data_gen.flow_from_directory(DATA_DIR, 
-                                              classes=['images'],
-                                              class_mode=None, 
-                                              shuffle=True,
-                                              subset="training")
+                                              classes=['images'], 
+                                              class_mode=None,
+                                              subset="training", 
+                                              shuffle=True)
 tr_mask_gen = mask_data_gen.flow_from_directory(DATA_DIR, 
-                                                classes=['masks'], 
+                                                classes=['masks'],
                                                 class_mode=None, 
-                                                color_mode='gray',
+                                                color_mode='gray', #<- notice the color mode
                                                 subset="training",
                                                 shuffle=True)
 print("validation:")
 val_img_gen = img_data_gen.flow_from_directory(DATA_DIR, 
                                                classes=['images'],
-                                               class_mode=None, 
-                                               shuffle=True,
-                                               subset="validation")
+                                               class_mode=None,
+                                               subset="validation", 
+                                               shuffle=True)
 val_mask_gen = mask_data_gen.flow_from_directory(DATA_DIR, 
                                                  classes=['masks'], 
                                                  class_mode=None, 
-                                                 color_mode='gray',
+                                                 color_mode='gray', #<- notice the color mode
                                                  subset="validation",
                                                  shuffle=True)
 #tr_img_gen.show_data()
