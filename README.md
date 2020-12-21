@@ -1,6 +1,6 @@
 >**NOTICE!**
 > * Support has moved from `keras` to `tensorflow.keras` framework. 
-> * There was a large update on 2020-12-17, see in [Changelog](CHANGELOG.md) what has changed.
+> * There were large updates in Dec 2020, see in [Changelog](CHANGELOG.md) what has changed.
 
 # ImageDataAugmentor
 `ImageDataAugmentor` is a custom image data generator for `tensorflow.keras` 
