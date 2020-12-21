@@ -38,7 +38,6 @@ Below are examples of some commonly encountered use cases.
 ```python
 from ImageDataAugmentor.image_data_augmentor import *
 import albumentations
-
 ...
     
 AUGMENTATIONS = albumentations.Compose([
@@ -123,8 +122,8 @@ model.fit(datagen.flow(x_train, y_train, batch_size=32),
 ```python    
 from ImageDataAugmentor.image_data_augmentor import *
 import albumentations
-
 ...
+
 SEED = 123
 AUGMENTATIONS = albumentations.Compose([
   albumentations.HorizontalFlip(p=0.5),
