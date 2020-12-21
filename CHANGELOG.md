@@ -1,5 +1,18 @@
 ## Changes
 
+**2020-12-21**
+
+* Added `ImageDataAugmentor.input_augment_mode` that enables selecting augmentations to
+inputs
+
+* Logic for `ImageDataAugmentor.input_augment_mode` and `ImageDataAugmentor.label_augment_mode` parameters
+
+* Added an usage example for the aforementioned augment modes in `README.md`
+
+
+* Fixed some small bugs: unused kwargs will now throw an error, `class_mode==None` returnables fixed
+
+
 **2020-12-17**
 
 * `ImageDataAugmentor.label_augment_mode` enables targeting augmentations to

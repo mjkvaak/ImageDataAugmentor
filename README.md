@@ -118,27 +118,101 @@ model.fit(datagen.flow(x_train, y_train, batch_size=32),
           steps_per_epoch=len(x_train) / 32, epochs=epochs)
 ```    
 
-[comment]: <> (**Example of using `.flow_from_directory&#40;&#41;` with masks for segmentation with `albumentations`:**)
+**Example of using `.flow_from_directory()` with masks for segmentation with `albumentations`:**
 
-[comment]: <> (```python    )
+```python    
+from ImageDataAugmentor.image_data_augmentor import *
+import albumentations
 
-[comment]: <> (from ImageDataAugmentor.image_data_augmentor import *)
+...
+SEED = 123
+AUGMENTATIONS = albumentations.Compose([
+  albumentations.HorizontalFlip(p=0.5),
+  albumentations.ElasticTransform(),
+])
 
-[comment]: <> (import albumentations)
+# Assume that DATA_DIR has subdirs "images" and "masks", 
+# where masks have been saved as grayscale images with pixel value
+# denoting the segmentation label
+DATA_DIR = ... 
+N_CLASSES = ... # number of segmentation classes in masks
 
-[comment]: <> (...)
+def one_hot_encode_masks(y:np.array, classes=range(N_CLASSES)):
+    ''' One hot encodes target masks for segmentation '''
+    y = y.squeeze()
+    masks = [(y == v) for v in classes]
+    mask = np.stack(masks, axis=-1).astype('float')
+    # add background if the mask is not binary
+    if mask.shape[-1] != 1:
+        background = 1 - mask.sum(axis=-1, keepdims=True)
+        mask = np.concatenate((mask, background), axis=-1)
+    return mask
 
-[comment]: <> (AUGMENTATIONS = albumentations.Compose&#40;[)
+img_data_gen = ImageDataAugmentor(
+    augment=AUGMENTATIONS, 
+    input_augment_mode='image', 
+    validation_split=0.2,
+    seed=SEED,
+)
+mask_data_gen = ImageDataAugmentor(
+    augment=AUGMENTATIONS, 
+    input_augment_mode='mask', #<- notice the different augment mode
+    preprocess_input=one_hot_encode_masks,
+    validation_split=0.2,
+    seed=SEED,
+)
+print("training:")
+tr_img_gen = img_data_gen.flow_from_directory(DATA_DIR, 
+                                              classes=['images'],
+                                              class_mode=None, 
+                                              shuffle=True,
+                                              subset="training")
+tr_mask_gen = mask_data_gen.flow_from_directory(DATA_DIR, 
+                                                classes=['masks'], 
+                                                class_mode=None, 
+                                                color_mode='gray',
+                                                subset="training",
+                                                shuffle=True)
+print("validation:")
+val_img_gen = img_data_gen.flow_from_directory(DATA_DIR, 
+                                               classes=['images'],
+                                               class_mode=None, 
+                                               shuffle=True,
+                                               subset="validation")
+val_mask_gen = mask_data_gen.flow_from_directory(DATA_DIR, 
+                                                 classes=['masks'], 
+                                                 class_mode=None, 
+                                                 color_mode='gray',
+                                                 subset="validation",
+                                                 shuffle=True)
+#tr_img_gen.show_data()
+#tr_mask_gen.show_data()
 
-[comment]: <> (    albumentations.HorizontalFlip&#40;p=0.5&#41;,)
+train_generator = zip(tr_img_gen, tr_mask_gen)
+validation_generator = zip(tr_img_gen, tr_mask_gen)
 
-[comment]: <> (    albumentations.ElasticTransform&#40;&#41;,)
+# visualize images
+rows = 5
+image_batch, mask_batch = next(train_generator)
+fix, ax = plt.subplots(rows,2, figsize=(4,rows*2))
+for i, (img,mask) in enumerate(zip(image_batch, mask_batch)):
+    if i>rows-1:
+        break
+    ax[i,0].imshow(np.uint8(img))
+    ax[i,1].imshow(mask.argmax(-1))
+    
+plt.show()
 
-[comment]: <> (]&#41;)
+# train the model
+model.fit(
+  train_generator,
+  steps_per_epoch=len(train_generator),
+  epochs=50,
+  validation_data=validation_generator,
+  validation_steps=len(validation_generator)
+)
 
-[comment]: <> (# TODO: continue this)
-
-[comment]: <> (```)
+```
 
 
 ## Citing (BibTex):<br />

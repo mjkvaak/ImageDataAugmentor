@@ -11,6 +11,7 @@ import random
 import warnings
 import numpy as np
 import pandas as pd
+from copy import deepcopy
 import scipy
 from scipy import linalg
 import cv2
@@ -56,6 +57,7 @@ class ImageDataAugmentor(Sequence):
                  samplewise_std_normalization: bool = False,
                  zca_whitening: bool = False,
                  augment=None,
+                 input_augment_mode: str = 'image',
                  label_augment_mode:str = None,
                  seed: int = None,
                  rescale: float = None,
@@ -73,16 +75,35 @@ class ImageDataAugmentor(Sequence):
         self.featurewise_std_normalization = featurewise_std_normalization
         self.samplewise_std_normalization = samplewise_std_normalization
         self.zca_whitening = zca_whitening
-        self.augment = augment
+        self.augment = deepcopy(augment)
+        self.input_augment_mode = input_augment_mode
         self.label_augment_mode = label_augment_mode
-        if self.label_augment_mode=="image":
-            warnings.warn("Trying to set `label_augment_mode` to `'image'`, but this key has already been preserved "
-                          "for the input image augmentations. Setting `label_augment_mode='same_as_input'` instead")
-            self.label_augment_mode = "same_as_input"
-            if self.augment is not None:
-                self.augment = albumentations.Compose(self.augment.transforms.transforms,
-                                                      additional_targets={self.label_augment_mode:'image'}
-                                                      )
+        if self.augment is not None:
+            additional_targets = self.augment.additional_targets
+            if self.input_augment_mode not in {'image','mask',}.union(additional_targets.keys()):
+                raise ValueError(f"Unknown `input_augment_mode='{self.input_augment_mode}'`")
+            if (self.label_augment_mode not in {'image','mask','same_as_input'}.union(additional_targets.keys())
+                and self.label_augment_mode is not None):
+                raise ValueError(f"Unknown `label_augment_mode='{self.label_augment_mode}'`")
+            if self.label_augment_mode == self.input_augment_mode:
+                if "same_as_input" not in additional_targets:
+                    warnings.warn(f"Trying to set `label_augment_mode` to `'{input_augment_mode}'`, but this key " 
+                                  f"has already been preserved for the input image augmentations. "
+                                  f"Setting `label_augment_mode='same_as_input'` instead")
+                    self.label_augment_mode = "same_as_input"
+                    additional_targets.update({self.label_augment_mode: self.input_augment_mode})
+                else:
+                    raise ValueError(f"Both `input_augment_mode` and `label_augment_mode` cannot be set to "
+                                     f"'same_as_input'")
+            elif self.label_augment_mode == "same_as_input":
+                if "same_as_input" not in additional_targets:
+                    warnings.warn(f"Trying to set `label_augment_mode` to `'same_as_input'`, but this key "
+                                  f"was not found in augmentations `additional_targets`. "
+                                  f"Adding `'{self.label_augment_mode}':'{self.input_augment_mode}'` to `additional_targets`")
+                    additional_targets.update({self.label_augment_mode: self.input_augment_mode})
+            self.augment = albumentations.Compose(self.augment.transforms.transforms,
+                                                  additional_targets=additional_targets
+                                                  )
         self.seed = seed
         self.rescale = rescale
         self.preprocess_input = preprocess_input
@@ -466,11 +487,14 @@ class ImageDataAugmentor(Sequence):
         if self.augment is not None:
             if self.seed:
                 random.seed(self.seed + self.total_transformations_done)
-            data = {'image': inputs}
+            if self.input_augment_mode == 'image':
+                data = {self.input_augment_mode: inputs}
+            else:
+                data = {'image': np.zeros((1,1,3), dtype='uint8'), self.input_augment_mode: inputs}
             if transform_targets:
                 data[self.label_augment_mode] = targets
             data = self.augment(**data)
-            inputs = data['image']
+            inputs = data[self.input_augment_mode]
             if transform_targets:
                 targets = data[self.label_augment_mode]
             self.total_transformations_done += 1

@@ -173,9 +173,9 @@ class BatchFromFilesMixin():
         """
         self.image_data_generator = image_data_generator
         self.target_size = tuple(target_size)
-        if color_mode not in {'rgb', 'rgba', 'grayscale'}:
+        if color_mode not in {'rgb', 'rgba', 'grayscale', 'gray'}:
             raise ValueError('Invalid color mode:', color_mode,
-                             '; expected "rgb", "rgba", or "grayscale".')
+                             '; expected "rgb", "rgba", or "grayscale", "gray".')
         self.color_mode = color_mode
         self.data_format = data_format
         if self.color_mode == 'rgba':
@@ -296,7 +296,7 @@ class BatchFromFilesMixin():
             batch_x = np.asarray(batch_x, dtype=self.dtype)
             if self.class_mode in {'input', 'image_target', 'mask_target'}:
                 batch_y = np.asarray(batch_y, dtype=self.dtype)
-        if self.class_mode == 'None':
+        if self.class_mode == None:
             return batch_x
         if self.sample_weight is None:
             return batch_x, batch_y
