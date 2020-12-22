@@ -75,7 +75,11 @@ class ImageDataAugmentor(Sequence):
         self.featurewise_std_normalization = featurewise_std_normalization
         self.samplewise_std_normalization = samplewise_std_normalization
         self.zca_whitening = zca_whitening
-        self.augment = deepcopy(augment)
+        if type(augment).__name__ in albumentations.augmentations.transforms.__all__:
+            warnings.warn(f"Wrapping single `augment = {type(augment).__name__}` inside `albumentations.Compose()")
+            self.augment = albumentations.Compose([augment])
+        else:
+            self.augment = deepcopy(augment)
         self.input_augment_mode = input_augment_mode
         self.label_augment_mode = label_augment_mode
         if self.augment is not None:
@@ -490,7 +494,8 @@ class ImageDataAugmentor(Sequence):
             if self.input_augment_mode == 'image':
                 data = {self.input_augment_mode: inputs}
             else:
-                data = {'image': np.zeros((1,1,3), dtype='uint8'), self.input_augment_mode: inputs}
+                data = {'image': np.zeros_like(inputs, dtype='uint8'), #<- dummy 'image' data
+                        self.input_augment_mode: inputs}
             if transform_targets:
                 data[self.label_augment_mode] = targets
             data = self.augment(**data)
@@ -529,7 +534,7 @@ class ImageDataAugmentor(Sequence):
 
         if self.featurewise_center:
             if self.mean is not None:
-                x -= self.mean
+                x = x - self.mean
             else:
                 warnings.warn('This ImageDataAugmentor specifies '
                               '`featurewise_center`, but it hasn\'t '
@@ -537,7 +542,7 @@ class ImageDataAugmentor(Sequence):
                               'first by calling `.fit(numpy_data)`.')
         if self.featurewise_std_normalization:
             if self.std is not None:
-                x /= (self.std + 1e-6)
+                x = x / (self.std + 1e-6)
             else:
                 warnings.warn('This ImageDataAugmentor specifies '
                               '`featurewise_std_normalization`, '
@@ -559,7 +564,7 @@ class ImageDataAugmentor(Sequence):
     def fit(self, x,
             augment=False,
             rounds=1,
-            seed=None):
+            ):
         """Fits the data generator to some sample data.
         This computes the internal data stats related to the
         data-dependent transformations, based on an array of sample data.
@@ -578,7 +583,6 @@ class ImageDataAugmentor(Sequence):
                 this is how many augmentation passes over the data to use.
             seed: Int (default: None). Random seed.
        """
-        x = np.asarray(x, dtype=self.dtype)
         if x.ndim != 4:
             raise ValueError('Input to `.fit()` should have rank 4. '
                              'Got array with shape: ' + str(x.shape))
@@ -594,18 +598,19 @@ class ImageDataAugmentor(Sequence):
                 str(x.shape) + ' (' + str(x.shape[self.channel_axis]) +
                 ' channels).')
 
-        if seed is not None:
-            random.seed(seed)
-            np.random.seed(seed)
+        if self.seed is not None:
+            random.seed(self.seed)
+            np.random.seed(self.seed)
 
         x = np.copy(x)
         if augment:
             ax = np.zeros(
                 tuple([rounds * x.shape[0]] + list(x.shape)[1:]),
-                dtype=self.dtype)
+                dtype=x.dtype)
             for r in range(rounds):
                 for i in range(x.shape[0]):
-                    ax[i + r * x.shape[0]] = self.augment(x[i])
+                    data = {self.input_augment_mode:x[i]}
+                    ax[i + r * x.shape[0]] = self.augment(**data)[self.input_augment_mode]
             x = ax
 
         if self.featurewise_center:
