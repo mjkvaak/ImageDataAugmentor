@@ -33,8 +33,9 @@ class ImageDataAugmentor(Sequence):
             (after applying all other transformations).
         preprocess_input: function that will be implied on each input.
             The function will run after the image is resized and augmented.
-            The function should take one argument:
-            one image, and should output a Numpy tensor with the same shape.
+            The function inputs an image and should output a Numpy tensor.
+        preprocess_labels: function that will be implied on the labels.
+            The function will run after the targets have been augmented.
         augment: augmentations passed as albumentations (sequence of) transformations.
         seed: Optional random seed for shuffling and transformations.
         data_format: Image data format,
@@ -58,18 +59,17 @@ class ImageDataAugmentor(Sequence):
                  zca_whitening: bool = False,
                  augment=None,
                  input_augment_mode: str = 'image',
-                 label_augment_mode:str = None,
+                 label_augment_mode: str = None,
                  seed: int = None,
                  rescale: float = None,
-                 preprocess_input=None,
-                 preprocess_output=None,
+                 preprocess_input: callable = None,
+                 preprocess_labels: callable = None,
                  data_format: str = 'channels_last',
                  validation_split: float = 0.0,
                  **kwargs
                  ):
         if kwargs:
             raise TypeError(f"__init__ got  the following unexpected keyword arguments: {', '.join(kwargs.keys())}")
-
         self.featurewise_center = featurewise_center
         self.samplewise_center = samplewise_center
         self.featurewise_std_normalization = featurewise_std_normalization
@@ -84,14 +84,14 @@ class ImageDataAugmentor(Sequence):
         self.label_augment_mode = label_augment_mode
         if self.augment is not None:
             additional_targets = self.augment.additional_targets
-            if self.input_augment_mode not in {'image','mask',}.union(additional_targets.keys()):
+            if self.input_augment_mode not in {'image', 'mask', }.union(additional_targets.keys()):
                 raise ValueError(f"Unknown `input_augment_mode='{self.input_augment_mode}'`")
-            if (self.label_augment_mode not in {'image','mask','same_as_input'}.union(additional_targets.keys())
-                and self.label_augment_mode is not None):
+            if (self.label_augment_mode not in {'image', 'mask', 'same_as_input'}.union(additional_targets.keys())
+                    and self.label_augment_mode is not None):
                 raise ValueError(f"Unknown `label_augment_mode='{self.label_augment_mode}'`")
             if self.label_augment_mode == self.input_augment_mode:
                 if "same_as_input" not in additional_targets:
-                    warnings.warn(f"Trying to set `label_augment_mode` to `'{input_augment_mode}'`, but this key " 
+                    warnings.warn(f"Trying to set `label_augment_mode` to `'{input_augment_mode}'`, but this key "
                                   f"has already been preserved for the input image augmentations. "
                                   f"Setting `label_augment_mode='same_as_input'` instead")
                     self.label_augment_mode = "same_as_input"
@@ -111,7 +111,7 @@ class ImageDataAugmentor(Sequence):
         self.seed = seed
         self.rescale = rescale
         self.preprocess_input = preprocess_input
-        self.preprocess_output = preprocess_output
+        self.preprocess_labels = preprocess_labels
         self.total_transformations_done = 0
 
         if data_format not in {'channels_last', 'channels_first'}:
@@ -480,9 +480,9 @@ class ImageDataAugmentor(Sequence):
         )
 
     def transform_data(self,
-                       inputs:np.array,
-                       targets:np.array=None,
-                       standardize:bool=True):
+                       inputs: np.array,
+                       targets: np.array = None,
+                       standardize: bool = True):
         """
         Transforms an image by first augmenting and then standardizing
         """
@@ -494,7 +494,7 @@ class ImageDataAugmentor(Sequence):
             if self.input_augment_mode == 'image':
                 data = {self.input_augment_mode: inputs}
             else:
-                data = {'image': np.zeros_like(inputs, dtype='uint8'), #<- dummy 'image' data
+                data = {'image': np.zeros_like(inputs, dtype='uint8'),  # <- dummy 'image' data
                         self.input_augment_mode: inputs}
             if transform_targets:
                 data[self.label_augment_mode] = targets
@@ -523,15 +523,14 @@ class ImageDataAugmentor(Sequence):
         """
         if self.preprocess_input:
             x = self.preprocess_input(x)
-        if self.preprocess_output:
-            y = self.preprocess_output(y)
+        if self.preprocess_labels:
+            y = self.preprocess_labels(y)
         if self.rescale:
             x = np.multiply(x, self.rescale)
         if self.samplewise_center:
             x = x - np.mean(x, keepdims=True)
         if self.samplewise_std_normalization:
             x = np.divide(x, (np.std(x, keepdims=True) + 1e-6))
-
         if self.featurewise_center:
             if self.mean is not None:
                 x = x - self.mean
@@ -609,7 +608,11 @@ class ImageDataAugmentor(Sequence):
                 dtype=x.dtype)
             for r in range(rounds):
                 for i in range(x.shape[0]):
-                    data = {self.input_augment_mode:x[i]}
+                    if self.input_augment_mode == 'image':
+                        data = {self.input_augment_mode: x[i]}
+                    else:
+                        data = {'image': np.zeros_like(x[i], dtype='uint8'),  # <- dummy 'image' data
+                                self.input_augment_mode: x[i]}
                     ax[i + r * x.shape[0]] = self.augment(**data)[self.input_augment_mode]
             x = ax
 

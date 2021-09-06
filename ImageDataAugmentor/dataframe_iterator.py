@@ -58,8 +58,12 @@ class DataFrameIterator(BatchFromFilesMixin, Iterator):
             - `"multi_output"`: list with the values of the different columns,
             - `"raw"`: numpy array of values in `y_col` column(s),
             - `"sparse"`: 1D numpy array of integer labels,
-            - `"image_target"`: string, filepaths relative to
-                `directory` (or absolute paths if `directory` is None)
+            - `"color_target"`: string, filepaths relative to
+                `directory` (or absolute paths if `directory` is None) will be opened in the
+                 specified `color_mode`
+            - `"grayscale_target"`: string, filepaths relative to
+                `directory` (or absolute paths if `directory` is None) will be opened in the
+                 `color_mode = 'gray'`
             - `None`, no targets are returned (the generator will only yield
                 batches of image data, which is useful to use in
                 `model.predict()`).
@@ -88,13 +92,13 @@ class DataFrameIterator(BatchFromFilesMixin, Iterator):
         can lead to speed-up in the instantiation of this class. Default: `True`.
     """
     allowed_class_modes = {
-        'binary', 'categorical', 'input', 'multi_output', 'raw', 'sparse', 'image_target', 'mask_target', None
+        'binary', 'categorical', 'input', 'multi_output', 'raw', 'sparse', 'color_target', 'grayscale_target', None
     }
 
     def __init__(self,
                  dataframe: pd.DataFrame,
                  directory: str = None,
-                 image_data_generator = None,
+                 image_data_generator=None,
                  x_col: str = "filename",
                  y_col: str = "class",
                  weight_col: str = None,
@@ -134,7 +138,7 @@ class DataFrameIterator(BatchFromFilesMixin, Iterator):
         self._check_params(df, x_col, y_col, weight_col, classes)
         if validate_filenames:  # check which image files are valid and keep them
             df = self._filter_valid_filepaths(df, x_col)
-        if class_mode not in ["input", "multi_output", "raw", "image_target",'mask_target', None]:
+        if class_mode not in ["input", "multi_output", "raw", "color_target", 'grayscale_target', None]:
             df, classes = self._filter_classes(df, y_col, classes)
             num_classes = len(classes)
             # build an index of all the unique classes
@@ -148,7 +152,7 @@ class DataFrameIterator(BatchFromFilesMixin, Iterator):
             stop = int(self.split[1] * num_files)
             df = df.iloc[start: stop, :]
         # get labels for each observation
-        if class_mode not in ["input", "multi_output", "raw", "image_target", 'mask_target',None]:
+        if class_mode not in ["input", "multi_output", "raw", "color_target", 'grayscale_target', None]:
             self.classes = self.get_classes(df, y_col)
         self.filenames = df[x_col].tolist()
         self._sample_weight = df[weight_col].values if weight_col else None
@@ -157,12 +161,12 @@ class DataFrameIterator(BatchFromFilesMixin, Iterator):
             self._targets = [np.array(df[col].tolist()) for col in y_col]
         elif class_mode == "raw":
             self._targets = df[y_col].values
-        elif class_mode in ["image_target", 'mask_target',]:
+        elif class_mode in ["color_target", 'grayscale_target', ]:
             self._targets = df[y_col].tolist()
 
         self.samples = len(self.filenames)
         validated_string = 'validated' if validate_filenames else 'non-validated'
-        if class_mode in ["input", "multi_output", "raw", "image_target", 'mask_target',None]:
+        if class_mode in ["input", "multi_output", "raw", "color_target", 'grayscale_target', None]:
             print('Found {} {} image filenames.'
                   .format(self.samples, validated_string))
         else:
@@ -291,7 +295,7 @@ class DataFrameIterator(BatchFromFilesMixin, Iterator):
 
     @property
     def labels(self):
-        if self.class_mode in {"multi_output", "raw", "image_target", 'mask_target',}:
+        if self.class_mode in {"multi_output", "raw", "color_target", 'grayscale_target', }:
             return self._targets
         else:
             return self.classes

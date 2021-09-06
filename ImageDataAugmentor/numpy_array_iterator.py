@@ -125,7 +125,7 @@ class NumpyArrayIterator(Iterator):
                           f'data format convention `"{data_format}"` '
                           f'(channels on axis {channels_axis}), i.e. '
                           f'expected either 1, 3, or 4 channels on axis '
-                          f'{channels_axis}. However, it was passed an array with shape ' 
+                          f'{channels_axis}. However, it was passed an array with shape '
                           f'{self.x.shape} ({self.x.shape[channels_axis]} channels).'
                           )
         if y is not None:
@@ -151,8 +151,8 @@ class NumpyArrayIterator(Iterator):
         # build batch of image data
         batch_x = np.array([self.x[j] for j in index_array])
 
-        if self.data_format == "channels_first": # swap into "channels_last" data_format if needed
-            batch_x = np.array([np.swapaxes(x,0,2) for x in batch_x])
+        if self.data_format == "channels_first":  # swap into "channels_last" data_format if needed
+            batch_x = np.array([np.swapaxes(x, 0, 2) for x in batch_x])
 
         if self.y is not None:
             batch_y = np.array([self.y[j] for j in index_array])
@@ -168,8 +168,8 @@ class NumpyArrayIterator(Iterator):
                 for x in batch_x
             ])
             batch_y = np.array([])
-        if self.data_format == "channels_first": # return the "channels_first" data_format if needed
-            batch_x = np.array([np.swapaxes(x,0,2) for x in batch_x])
+        if self.data_format == "channels_first":  # return the "channels_first" data_format if needed
+            batch_x = np.array([np.swapaxes(x, 0, 2) for x in batch_x])
 
         if self.save_to_dir:
             for i, j in enumerate(index_array):
@@ -204,8 +204,8 @@ class NumpyArrayIterator(Iterator):
         else:
             imgs = self._get_batch_of_samples(img_arr, apply_standardization=apply_standardization)[0]
 
-        if self.data_format == "channels_first": # swap into the "channels_last" data_format if needed
-            imgs = np.array([np.swapaxes(img,0,2) for img in imgs])
+        if self.data_format == "channels_first":  # swap into the "channels_last" data_format if needed
+            imgs = np.array([np.swapaxes(img, 0, 2) for img in imgs])
 
         if not 'figsize' in plt_kwargs:
             plt_kwargs['figsize'] = (2 * cols, 2 * rows)

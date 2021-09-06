@@ -9,13 +9,13 @@ import warnings
 
 import numpy as np
 import cv2
+
 try:
     from PIL import ImageEnhance
     from PIL import Image as pil_image
 except ImportError:
     pil_image = None
     ImageEnhance = None
-
 
 if pil_image is not None:
     _PIL_INTERPOLATION_METHODS = {
@@ -79,25 +79,25 @@ def load_img(fname, color_mode='rgb', target_size=None, interpolation=cv2.INTER_
     if color_mode == "rgb":
         img = cv2.imread(fname)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        
+
     elif color_mode == "rgba":
-        img = cv2.imread(fname,-1) 
-        if img.shape[-1]!=4: #Add alpha-channel if not RGBA
+        img = cv2.imread(fname, -1)
+        if img.shape[-1] != 4:  # Add alpha-channel if not RGBA
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGBA)
-            
+
     elif color_mode in {"grayscale", "gray"}:
         img = cv2.imread(fname, 0)
 
     else:
         img = cv2.imread(fname)
-        
+
     if target_size is not None:
         width_height_tuple = (target_size[1], target_size[0])
         if img.shape[0:2] != width_height_tuple:
-            img = cv2.resize(img, dsize=width_height_tuple, interpolation = interpolation)
+            img = cv2.resize(img, dsize=width_height_tuple, interpolation=interpolation)
 
     if color_mode in {"grayscale", "gray"}:
-        return img[..., np.newaxis] #Add dummy axis. This is done here, cause `cv2.resize` removes the dummy axes
+        return img[..., np.newaxis]  # Add dummy axis. This is done here, cause `cv2.resize` removes the dummy axes
 
     else:
         return img
@@ -133,6 +133,7 @@ def _iter_valid_files(directory, white_list_formats, follow_links):
     # Yields
         Tuple of (root, filename) with extension in `white_list_formats`.
     """
+
     def _recursive_list(subpath):
         return sorted(os.walk(subpath, followlinks=follow_links),
                       key=lambda x: x[0])

@@ -1,5 +1,16 @@
 ## Changes
 
+**2021-09-06**
+* Fixed the bug with `ImageDataAugmentor.fit` when custom targets have been specified.
+
+* Changed the signature of `ImageDataAugmentor.preprocess_output` to `ImageDataAugmentor.preprocess_labels`
+  (the latter is more descriptive)
+
+* Changed the `DataFrameIterator.class_mode` options `image_target` and `mask_target` to better describing
+  `color_target` and `grayscale_target`, respectively.
+
+* Finished the segmentation example `./examples/segmentation-with-flow_from_dataframe.ipynb`
+
 **2020-12-21**
 
 * Added `ImageDataAugmentor.input_augment_mode` that enables selecting augmentations to

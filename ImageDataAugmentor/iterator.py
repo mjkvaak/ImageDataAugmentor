@@ -8,12 +8,13 @@ import os
 import threading
 import numpy as np
 from keras_preprocessing import get_keras_submodule
+
 try:
     IteratorType = get_keras_submodule('utils').Sequence
 except ImportError:
     IteratorType = object
 import matplotlib.pyplot as plt
-from .utils import (array_to_img,load_img)
+from .utils import (array_to_img, load_img)
 
 
 class Iterator(IteratorType):
@@ -31,12 +32,12 @@ class Iterator(IteratorType):
     white_list_formats = ('png', 'jpg', 'jpeg', 'bmp', 'ppm', 'tif', 'tiff')
 
     def __init__(self, n, batch_size, shuffle, seed):
-        self.n :int= n
-        self.batch_size:int = batch_size
-        self.seed:int = seed
-        self.shuffle:bool = shuffle
-        self.batch_index:int = 0
-        self.total_batches_seen:int = 0
+        self.n: int = n
+        self.batch_size: int = batch_size
+        self.seed: int = seed
+        self.shuffle: bool = shuffle
+        self.batch_index: int = 0
+        self.total_batches_seen: int = 0
         self.lock = threading.Lock()
         self.index_array = None
         self.index_generator = self._flow_index()
@@ -225,12 +226,12 @@ class BatchFromFilesMixin():
         # build batch of image data
         # self.filepaths is dynamic, is better to call it once outside the loop
         filepaths = self.filepaths
-        
+
         # build batch of image data
-        batch_x = np.array([load_img(filepaths[x], 
+        batch_x = np.array([load_img(filepaths[x],
                                      color_mode=self.color_mode,
-                                     target_size=self.target_size, 
-                                     interpolation=self.interpolation) for x in index_array])    
+                                     target_size=self.target_size,
+                                     interpolation=self.interpolation) for x in index_array])
 
         if self.class_mode == 'input':
             batch_y = batch_x.copy()
@@ -247,12 +248,12 @@ class BatchFromFilesMixin():
             batch_y = [output[index_array] for output in self.labels]
         elif self.class_mode == 'raw':
             batch_y = self.labels[index_array]
-        elif self.class_mode == 'image_target':
+        elif self.class_mode == 'color_target':
             batch_y = np.array([load_img(self.labels[y],
                                          color_mode=self.color_mode,
                                          target_size=self.target_size,
                                          interpolation=self.interpolation) for y in index_array])
-        elif self.class_mode == 'mask_target':
+        elif self.class_mode == 'grayscale_target':
             batch_y = np.array([load_img(self.labels[y],
                                          color_mode="gray",
                                          target_size=self.target_size,
@@ -261,10 +262,10 @@ class BatchFromFilesMixin():
             batch_y = None
 
         # apply the augmentations and standardization to the data
-        if self.class_mode in {'input', 'raw', 'image_target', 'mask_target'}:
+        if self.class_mode in {'input', 'raw', 'color_target', 'grayscale_target'}:
             data = [
                 self.image_data_generator.transform_data(x, y, standardize=apply_standardization)
-                for x,y in zip(batch_x, batch_y)
+                for x, y in zip(batch_x, batch_y)
             ]
             batch_x = np.array([d[0] for d in data])
             batch_y = np.array([d[1] for d in data])
@@ -276,8 +277,8 @@ class BatchFromFilesMixin():
 
         # transform to `channels_first` format if needed
         if self.data_format == "channels_first":
-            batch_x = np.array([np.swapaxes(x,0,2) for x in batch_x])
-            if self.class_mode in {'input', 'image_target', 'mask_target',}:
+            batch_x = np.array([np.swapaxes(x, 0, 2) for x in batch_x])
+            if self.class_mode in {'input', 'color_target', 'grayscale_target', }:
                 batch_y = np.array([np.swapaxes(y, 0, 2) for x in batch_y])
 
         # optionally save augmented images to disk e.g. for debugging purposes
@@ -294,7 +295,7 @@ class BatchFromFilesMixin():
         # return batch
         if apply_standardization:
             batch_x = np.asarray(batch_x, dtype=self.dtype)
-            if self.class_mode in {'input', 'image_target', 'mask_target'}:
+            if self.class_mode in {'input', 'color_target', 'grayscale_target'}:
                 batch_y = np.asarray(batch_y, dtype=self.dtype)
         if self.class_mode == None:
             return batch_x
@@ -306,20 +307,19 @@ class BatchFromFilesMixin():
     def _get_batches_of_transformed_samples(self, index_array):
         return self._get_batch_of_samples(index_array)
 
+    def show_data(self, rows: int = 5, cols: int = 5, apply_standardization: bool = False, **plt_kwargs):
 
-    def show_data(self, rows:int=5, cols:int=5, apply_standardization:bool=False, **plt_kwargs):
-
-        index_array = np.random.choice(range(self.n), rows*cols)
+        index_array = np.random.choice(range(self.n), rows * cols)
         if self.class_mode is None:
             imgs = self._get_batch_of_samples(index_array, apply_standardization=apply_standardization)
         else:
             imgs = self._get_batch_of_samples(index_array, apply_standardization=apply_standardization)[0]
 
-        if self.class_mode in {'input', 'image_target', 'mask_target', 'raw'}:
+        if self.class_mode in {'input', 'color_target', 'grayscale_target', 'raw'}:
             labels = None
         elif self.class_mode == 'multi_output':
             labels = [output[index_array] for output in self.labels]
-            labels = [(x,y) for x,y in zip(*labels)]
+            labels = [(x, y) for x, y in zip(*labels)]
         else:
             labels = np.array(self.classes)[index_array]
             inv_class_indices = {v: k for k, v in self.class_indices.items()}
@@ -329,26 +329,26 @@ class BatchFromFilesMixin():
             imgs = np.array([np.swapaxes(img, 0, 2) for img in imgs])
 
         if not 'figsize' in plt_kwargs:
-            plt_kwargs['figsize'] = (2*cols, 2*rows)
+            plt_kwargs['figsize'] = (2 * cols, 2 * rows)
 
         plt.close('all')
         plt.figure(**plt_kwargs)
         for idx, img in enumerate(imgs):
-            plt.subplot(rows, cols, idx+1)
+            plt.subplot(rows, cols, idx + 1)
             plt.imshow(img.squeeze())
             if labels is not None:
                 plt.title(labels[idx])
             plt.axis('off')
-        
+
         plt.subplots_adjust(hspace=0.5, wspace=0.5)
         plt.show()
-        
+
     @property
     def filepaths(self):
         """List of absolute paths to image files"""
         raise NotImplementedError(
             '`filepaths` property method has not been implemented in {}.'
-            .format(type(self).__name__)
+                .format(type(self).__name__)
         )
 
     @property
@@ -356,12 +356,12 @@ class BatchFromFilesMixin():
         """Class labels of every observation"""
         raise NotImplementedError(
             '`labels` property method has not been implemented in {}.'
-            .format(type(self).__name__)
+                .format(type(self).__name__)
         )
 
     @property
     def sample_weight(self):
         raise NotImplementedError(
             '`sample_weight` property method has not been implemented in {}.'
-            .format(type(self).__name__)
+                .format(type(self).__name__)
         )
