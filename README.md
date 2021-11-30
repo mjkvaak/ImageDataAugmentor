@@ -14,15 +14,10 @@ To learn more about:
 
 
 ### Installation 
-* For `tensorflow.keras`:
+> For the installation of the prerequisites, see these two gists: [NVIDIA-driver installation](https://gist.github.com/mjkvaak/5769ebdfbf6598b3fd0ece66b3c12a3c) and [TF2.x installation](https://gist.github.com/mjkvaak/ad0fea057d5a733dc76524825f21dee2)
+
 ```shell
 $ pip install git+https://github.com/mjkvaak/ImageDataAugmentor
-```
-
-* (Deprecated) for `keras` you can still install `ImageDataAugmentor` 
-  from the last commit that supported the framework:
-```shell
-$ pip install git+https://github.com/mjkvaak/ImageDataAugmentor.git@ce9bf4d7d532bfcb14fda7fb43d7bcdc6d7990ff
 ```
 
 ### How to use
