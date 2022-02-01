@@ -8,6 +8,7 @@ from __future__ import division
 from __future__ import print_function
 
 import random
+import gc
 import warnings
 import numpy as np
 import pandas as pd
@@ -491,11 +492,10 @@ class ImageDataAugmentor(Sequence):
         if self.augment is not None:
             if self.seed:
                 random.seed(self.seed + self.total_transformations_done)
-            if self.input_augment_mode == 'image':
-                data = {self.input_augment_mode: inputs}
-            else:
-                data = {'image': np.zeros_like(inputs, dtype='uint8'),  # <- dummy 'image' data
-                        self.input_augment_mode: inputs}
+            data = {self.input_augment_mode: inputs}
+            if self.input_augment_mode != 'image':
+                # add dummy 'image' data, since albumentations always expects the `image` field
+                data['image'] = np.zeros_like(inputs, dtype=inputs.dtype)
             if transform_targets:
                 data[self.label_augment_mode] = targets
             data = self.augment(**data)
@@ -605,16 +605,18 @@ class ImageDataAugmentor(Sequence):
         if augment:
             ax = np.zeros(
                 tuple([rounds * x.shape[0]] + list(x.shape)[1:]),
-                dtype=x.dtype)
+                dtype=x.dtype
+            )
             for r in range(rounds):
                 for i in range(x.shape[0]):
-                    if self.input_augment_mode == 'image':
-                        data = {self.input_augment_mode: x[i]}
-                    else:
-                        data = {'image': np.zeros_like(x[i], dtype='uint8'),  # <- dummy 'image' data
-                                self.input_augment_mode: x[i]}
+                    data = {self.input_augment_mode: x[i]}
+                    if self.input_augment_mode != 'image':
+                        # add dummy 'image' data, since albumentations always expects the `image` field
+                        data['image'] = np.zeros_like(x[i], dtype=x.dtype)
                     ax[i + r * x.shape[0]] = self.augment(**data)[self.input_augment_mode]
             x = ax
+            del ax, data
+            gc.collect()
 
         if self.featurewise_center:
             self.mean = np.mean(x, axis=(0, self.row_axis, self.col_axis))
