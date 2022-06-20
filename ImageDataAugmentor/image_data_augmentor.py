@@ -106,7 +106,7 @@ class ImageDataAugmentor(Sequence):
                                   f"was not found in augmentations `additional_targets`. "
                                   f"Adding `'{self.label_augment_mode}':'{self.input_augment_mode}'` to `additional_targets`")
                     additional_targets.update({self.label_augment_mode: self.input_augment_mode})
-            self.augment = albumentations.Compose(self.augment.transforms.transforms,
+            self.augment = albumentations.Compose(self.augment.transforms,
                                                   additional_targets=additional_targets
                                                   )
         self.seed = seed

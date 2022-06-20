@@ -1,6 +1,6 @@
-albumentations
-opencv-python>=4.2
+albumentations~=1.2.0
+opencv-python~=4.6
+pandas
 matplotlib
 Pillow
 scipy
-pandas
